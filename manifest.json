@@ -1,0 +1,20 @@
+{
+  "name": "Gestor de Clientes — Drive",
+  "short_name": "Gestor Clientes",
+  "description": "Gestiona los documentos de tus clientes directamente desde Google Drive.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "id": "./index.html",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "background_color": "#F7F7F9",
+  "theme_color": "#534AB7",
+  "orientation": "portrait-primary",
+  "lang": "es",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
