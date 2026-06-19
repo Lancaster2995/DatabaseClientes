@@ -1,0 +1,382 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+.app{display:flex;height:620px;border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);overflow:hidden;background:var(--color-background-primary);}
+.sidebar{width:210px;min-width:210px;border-right:0.5px solid var(--color-border-tertiary);display:flex;flex-direction:column;background:var(--color-background-secondary);}
+.sh{padding:12px 12px 8px;border-bottom:0.5px solid var(--color-border-tertiary);}
+.sh p{font-size:11px;font-weight:500;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:.06em;}
+.cl{flex:1;overflow-y:auto;padding:6px 0;}
+.ci{display:flex;align-items:center;gap:8px;padding:7px 10px;cursor:pointer;border-left:2px solid transparent;}
+.ci:hover{background:var(--color-background-primary);}
+.ci.active{background:var(--color-background-primary);border-left-color:#534AB7;}
+.av{width:26px;height:26px;border-radius:50%;background:#EEEDFE;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:500;color:#534AB7;flex-shrink:0;}
+.cn{font-size:13px;color:var(--color-text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.add-btn{margin:8px;padding:6px 10px;background:transparent;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);font-size:12px;color:var(--color-text-secondary);cursor:pointer;display:flex;align-items:center;gap:5px;width:calc(100% - 16px);}
+.add-btn:hover{background:var(--color-background-primary);color:var(--color-text-primary);}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;}
+.topbar{padding:9px 14px;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;gap:8px;}
+.bc{display:flex;align-items:center;gap:3px;flex:1;font-size:13px;overflow:hidden;}
+.bc span{color:var(--color-text-secondary);cursor:pointer;white-space:nowrap;}
+.bc span:hover{color:var(--color-text-primary);}
+.bc .cur{color:var(--color-text-primary);font-weight:500;}
+.bc .sep{opacity:.35;}
+.ta{display:flex;gap:5px;}
+.bsm{padding:5px 9px;font-size:12px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:transparent;color:var(--color-text-secondary);cursor:pointer;display:flex;align-items:center;gap:4px;}
+.bsm:hover{background:var(--color-background-secondary);color:var(--color-text-primary);}
+.bpri{background:#534AB7;color:#fff;border-color:#534AB7;}
+.bpri:hover{background:#3C3489;color:#fff;}
+.fa{flex:1;overflow-y:auto;}
+.fr{display:flex;align-items:center;gap:8px;padding:6px 14px;border-bottom:0.5px solid var(--color-border-tertiary);cursor:default;}
+.fr:last-child{border-bottom:none;}
+.fr:hover{background:var(--color-background-secondary);}
+.fi{font-size:15px;color:var(--color-text-secondary);flex-shrink:0;}
+.fi.fld{color:#534AB7;}
+.fn{flex:1;font-size:13px;color:var(--color-text-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.fn input{font-size:13px;border:0.5px solid #534AB7;border-radius:4px;padding:1px 6px;background:var(--color-background-primary);color:var(--color-text-primary);width:100%;outline:none;}
+.fm{font-size:11px;color:var(--color-text-secondary);white-space:nowrap;min-width:52px;text-align:right;}
+.fac{display:flex;gap:2px;opacity:0;}
+.fr:hover .fac{opacity:1;}
+.ib{width:24px;height:24px;border-radius:6px;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--color-text-secondary);}
+.ib:hover{background:var(--color-background-primary);color:var(--color-text-primary);}
+.ib.del:hover{background:#FCEBEB;color:#A32D2D;}
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:8px;color:var(--color-text-secondary);}
+.empty i{font-size:32px;opacity:.25;}
+.empty p{font-size:13px;}
+.sb{padding:5px 14px;border-top:0.5px solid var(--color-border-tertiary);font-size:11px;color:var(--color-text-secondary);display:flex;align-items:center;gap:6px;}
+.dot{width:6px;height:6px;border-radius:50%;background:#639922;flex-shrink:0;}
+.dot.spin{background:#BA7517;animation:pulse 1s infinite;}
+.dot.err{background:#A32D2D;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.ov{position:absolute;inset:0;background:rgba(0,0,0,.38);display:flex;align-items:center;justify-content:center;z-index:50;}
+.mo{background:var(--color-background-primary);border-radius:var(--border-radius-lg);border:0.5px solid var(--color-border-tertiary);padding:18px;width:330px;}
+.mo h3{font-size:14px;font-weight:500;margin-bottom:12px;color:var(--color-text-primary);}
+.mo p{font-size:12px;color:var(--color-text-secondary);margin-top:6px;line-height:1.5;}
+.mo label{font-size:11px;color:var(--color-text-secondary);display:block;margin-bottom:3px;margin-top:9px;}
+.mo input,.mo select{width:100%;padding:6px 9px;font-size:13px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:var(--color-background-primary);color:var(--color-text-primary);outline:none;}
+.mo input:focus{border-color:#534AB7;}
+.mac{display:flex;gap:6px;justify-content:flex-end;margin-top:14px;}
+.udrop{border:1.5px dashed var(--color-border-secondary);border-radius:var(--border-radius-md);padding:14px;text-align:center;font-size:12px;color:var(--color-text-secondary);cursor:pointer;margin-top:8px;}
+.udrop:hover{border-color:#534AB7;color:#534AB7;}
+.tag{display:inline-flex;align-items:center;gap:3px;font-size:10px;padding:2px 6px;border-radius:4px;background:#EEEDFE;color:#534AB7;margin-left:6px;}
+</style>
+
+<h2 class="sr-only">Gestor de clientes con Google Drive — navega, descarga, elimina y sube archivos.</h2>
+
+<div class="app" id="app" style="position:relative;">
+  <div class="sidebar">
+    <div class="sh"><p>Clientes</p></div>
+    <div class="cl" id="clientList"></div>
+    <button class="add-btn" onclick="openAddClient()"><i class="ti ti-plus" aria-hidden="true"></i> Agregar cliente</button>
+  </div>
+  <div class="main">
+    <div class="topbar">
+      <div class="bc" id="bc"><span style="color:var(--color-text-secondary)">Selecciona un cliente</span></div>
+      <div class="ta" id="ta" style="display:none;">
+        <button class="bsm" onclick="openUpload()"><i class="ti ti-upload" aria-hidden="true"></i> Subir</button>
+        <button class="bsm" onclick="refresh()"><i class="ti ti-refresh" aria-hidden="true"></i></button>
+      </div>
+    </div>
+    <div class="fa" id="fa"><div class="empty"><i class="ti ti-users" aria-hidden="true"></i><p>Selecciona un cliente</p></div></div>
+    <div class="sb"><div class="dot" id="dot"></div><span id="stxt">Listo</span></div>
+  </div>
+  <div id="mc"></div>
+</div>
+
+<script>
+const CLAUDE_API = "https://api.anthropic.com/v1/messages";
+const DRIVE_MCP = "https://drivemcp.googleapis.com/mcp/v1";
+
+let clients = [];
+try { clients = JSON.parse(localStorage.getItem('driveClients_v2') || '[]'); } catch(e){}
+let activeIdx = null;
+let stack = [];
+let files = [];
+
+function save() { try { localStorage.setItem('driveClients_v2', JSON.stringify(clients)); } catch(e){} }
+
+function initials(n) { return n.split(' ').slice(0,2).map(w=>w[0]||'').join('').toUpperCase() || '?'; }
+
+function escH(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function escQ(s) { return String(s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+
+function setStatus(msg, type='ok') {
+  document.getElementById('stxt').textContent = msg;
+  const d = document.getElementById('dot');
+  d.className = 'dot' + (type==='loading'?' spin':type==='error'?' err':'');
+}
+
+function renderClients() {
+  const el = document.getElementById('clientList');
+  if (!clients.length) { el.innerHTML = '<div style="padding:12px;font-size:12px;color:var(--color-text-secondary);">Sin clientes aún</div>'; return; }
+  el.innerHTML = clients.map((c,i)=>`
+    <div class="ci ${activeIdx===i?'active':''}" onclick="selectClient(${i})">
+      <div class="av">${initials(c.name)}</div>
+      <span class="cn">${escH(c.name)}</span>
+    </div>`).join('');
+}
+
+function selectClient(i) {
+  activeIdx = i;
+  stack = [{ id: clients[i].folderId, name: clients[i].name }];
+  renderClients();
+  document.getElementById('ta').style.display = 'flex';
+  loadFolder(clients[i].folderId);
+}
+
+async function callClaude(userMsg) {
+  const res = await fetch(CLAUDE_API, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 1000,
+      messages: [{ role: 'user', content: userMsg }],
+      mcp_servers: [{ type: 'url', url: DRIVE_MCP, name: 'gdrive' }]
+    })
+  });
+  if (!res.ok) throw new Error('API error ' + res.status);
+  return await res.json();
+}
+
+function extractJSON(text) {
+  text = text.replace(/```json|```/g,'').trim();
+  const a = text.indexOf('['), b = text.lastIndexOf(']');
+  const c = text.indexOf('{'), d = text.lastIndexOf('}');
+  if (a !== -1 && b !== -1) return JSON.parse(text.slice(a, b+1));
+  if (c !== -1 && d !== -1) return JSON.parse(text.slice(c, d+1));
+  throw new Error('No JSON found');
+}
+
+async function loadFolder(folderId) {
+  renderBc();
+  document.getElementById('fa').innerHTML = '<div class="empty"><i class="ti ti-loader" aria-hidden="true" style="animation:pulse 1s infinite"></i><p>Cargando...</p></div>';
+  setStatus('Listando archivos...', 'loading');
+  try {
+    const data = await callClaude(`Use the gdrive search_files tool to list all files and folders with parentId = '${folderId}'. Then return ONLY a JSON array (no markdown, no text before or after) with objects: [{id, name, mimeType, size, modifiedTime}]. Include folders too.`);
+    const toolResult = data.content?.find(b => b.type === 'mcp_tool_result');
+    const textBlock = data.content?.find(b => b.type === 'text');
+    
+    let rawFiles = [];
+    if (toolResult?.content?.[0]?.text) {
+      try { const r = JSON.parse(toolResult.content[0].text); rawFiles = r.files || r || []; } catch(e){}
+    }
+    if (!rawFiles.length && textBlock?.text) {
+      try { rawFiles = extractJSON(textBlock.text); } catch(e){}
+    }
+    
+    files = rawFiles.map(f => ({
+      id: f.id,
+      name: f.name || f.title,
+      mimeType: f.mimeType,
+      size: f.size || f.fileSize,
+      modifiedTime: f.modifiedTime || f.modifiedDate,
+      isFolder: f.mimeType === 'application/vnd.google-apps.folder'
+    }));
+    setStatus(`${files.length} elemento${files.length!==1?'s':''}`);
+    renderFiles();
+  } catch(e) {
+    setStatus('Error al cargar', 'error');
+    document.getElementById('fa').innerHTML = `<div class="empty"><i class="ti ti-alert-circle" aria-hidden="true" style="color:#A32D2D"></i><p>Error: ${escH(e.message)}</p></div>`;
+  }
+}
+
+function getMimeIcon(mime, isFolder) {
+  if (isFolder) return 'ti-folder';
+  if (!mime) return 'ti-file';
+  if (mime.includes('pdf')) return 'ti-file-type-pdf';
+  if (mime.includes('sheet') || mime.includes('excel') || mime.includes('spreadsheet')) return 'ti-file-spreadsheet';
+  if (mime.includes('document') || mime.includes('word')) return 'ti-file-text';
+  if (mime.includes('presentation') || mime.includes('powerpoint')) return 'ti-presentation';
+  if (mime.includes('image')) return 'ti-photo';
+  if (mime.includes('zip') || mime.includes('rar')) return 'ti-file-zip';
+  if (mime.includes('video')) return 'ti-video';
+  if (mime.includes('audio')) return 'ti-music';
+  return 'ti-file';
+}
+
+function fmtSize(b) {
+  if (!b) return '';
+  b = parseInt(b);
+  if (b < 1024) return b + 'B';
+  if (b < 1048576) return Math.round(b/1024) + 'KB';
+  return (b/1048576).toFixed(1) + 'MB';
+}
+
+function fmtDate(d) {
+  if (!d) return '';
+  return new Date(d).toLocaleDateString('es-PE', {day:'2-digit',month:'short'});
+}
+
+function renderFiles() {
+  const el = document.getElementById('fa');
+  if (!files.length) { el.innerHTML = '<div class="empty"><i class="ti ti-folder-open" aria-hidden="true"></i><p>Carpeta vacía</p></div>'; return; }
+  const sorted = [...files].sort((a,b) => { if(a.isFolder!==b.isFolder) return a.isFolder?-1:1; return a.name.localeCompare(b.name); });
+  el.innerHTML = sorted.map(f => {
+    const icon = getMimeIcon(f.mimeType, f.isFolder);
+    const isGoogleNative = f.mimeType && f.mimeType.includes('vnd.google-apps') && !f.isFolder;
+    return `<div class="fr" id="row-${f.id}" ondblclick="${f.isFolder?`enterFolder('${escQ(f.id)}','${escQ(f.name)}')`:''}" title="${escH(f.name)}">
+      <i class="ti ${icon} fi ${f.isFolder?'fld':''}" aria-hidden="true"></i>
+      <span class="fn" id="fn-${f.id}">${escH(f.name)}${isGoogleNative?'<span class="tag"><i class="ti ti-brand-google-drive" aria-hidden="true"></i> Google</span>':''}</span>
+      <span class="fm">${fmtSize(f.size)||fmtDate(f.modifiedTime)}</span>
+      <div class="fac">
+        ${!f.isFolder?`<button class="ib" onclick="downloadFile('${escQ(f.id)}','${escQ(f.name)}','${escQ(f.mimeType)}')" title="Descargar / Abrir"><i class="ti ti-download" aria-hidden="true"></i></button>`:''}
+        <button class="ib" onclick="startRename('${escQ(f.id)}','${escQ(f.name)}')" title="Renombrar"><i class="ti ti-edit" aria-hidden="true"></i></button>
+        <button class="ib del" onclick="deleteFile('${escQ(f.id)}','${escQ(f.name)}')" title="Eliminar"><i class="ti ti-trash" aria-hidden="true"></i></button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderBc() {
+  const el = document.getElementById('bc');
+  el.innerHTML = stack.map((f,i) => {
+    if (i===stack.length-1) return `<span class="cur">${escH(f.name)}</span>`;
+    return `<span onclick="goTo(${i})">${escH(f.name)}</span><span class="sep"> / </span>`;
+  }).join('');
+}
+
+function enterFolder(id, name) { stack.push({id,name}); loadFolder(id); }
+function goTo(i) { stack = stack.slice(0,i+1); loadFolder(stack[i].id); }
+function refresh() { const s = stack[stack.length-1]; if(s) loadFolder(s.id); }
+
+async function downloadFile(id, name, mimeType) {
+  const isGoogleNative = mimeType && mimeType.includes('vnd.google-apps');
+  setStatus('Abriendo archivo...', 'loading');
+  try {
+    const data = await callClaude(`Use gdrive get_file_metadata tool for file ID "${id}". Return ONLY JSON: {webViewLink, webContentLink, exportLinks}. No markdown.`);
+    const textBlock = data.content?.find(b=>b.type==='text');
+    const toolResult = data.content?.find(b=>b.type==='mcp_tool_result');
+    let meta = {};
+    const src = toolResult?.content?.[0]?.text || textBlock?.text || '';
+    try { meta = JSON.parse(src.replace(/```json|```/g,'').trim()); } catch(e){
+      try { meta = extractJSON(src); } catch(e2){}
+    }
+    const url = meta.webContentLink || meta.webViewLink || (meta.exportLinks && Object.values(meta.exportLinks)[0]);
+    if (url) { window.open(url,'_blank'); setStatus('Archivo abierto'); }
+    else { setStatus('No se pudo obtener link', 'error'); }
+  } catch(e) { setStatus('Error: ' + e.message, 'error'); }
+}
+
+function startRename(id, current) {
+  const el = document.getElementById('fn-'+id);
+  if (!el) return;
+  el.innerHTML = `<input type="text" value="${escH(current)}" onblur="commitRename('${escQ(id)}',this.value,'${escQ(current)}')" onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){this.value='${escQ(current)}';this.blur();}" autofocus>`;
+  el.querySelector('input').select();
+}
+
+async function commitRename(id, newName, oldName) {
+  newName = newName.trim();
+  if (!newName || newName === oldName) { renderFiles(); return; }
+  setStatus(`Renombrando...`, 'loading');
+  try {
+    await callClaude(`Use gdrive copy_file tool on file ID "${id}" with title "${newName}", then delete the original. Actually — use the search_files tool first to confirm file "${id}" exists, then rename it by calling the appropriate tool with title "${newName}". Return ONLY JSON: {success:true}. No markdown.`);
+    const f = files.find(x=>x.id===id);
+    if (f) f.name = newName;
+    setStatus(`Renombrado a "${newName}"`);
+    renderFiles();
+  } catch(e) { setStatus('Error al renombrar', 'error'); renderFiles(); }
+}
+
+async function deleteFile(id, name) {
+  openModal(`<h3>Eliminar archivo</h3>
+    <p>"<strong>${escH(name)}</strong>" se eliminará permanentemente de Google Drive.</p>
+    <div class="mac">
+      <button class="bsm" onclick="closeModal()">Cancelar</button>
+      <button class="bsm" style="color:#A32D2D;border-color:#A32D2D;" onclick="confirmDelete('${escQ(id)}','${escQ(name)}')"><i class="ti ti-trash" aria-hidden="true"></i> Eliminar</button>
+    </div>`);
+}
+
+async function confirmDelete(id, name) {
+  closeModal();
+  setStatus(`Eliminando "${name}"...`, 'loading');
+  try {
+    await callClaude(`Use gdrive search_files to verify file ID "${id}" exists, then use the delete or trash tool to remove it permanently from Google Drive. If no delete tool exists, move it to trash. Return ONLY JSON: {success:true}. No markdown.`);
+    files = files.filter(x=>x.id!==id);
+    setStatus(`"${name}" eliminado`);
+    renderFiles();
+  } catch(e) { setStatus('Error al eliminar: '+e.message,'error'); }
+}
+
+function openUpload() {
+  if (!clients.length) return;
+  const opts = clients.map((c,i)=>`<option value="${i}" ${i===activeIdx?'selected':''}>${escH(c.name)}</option>`).join('');
+  openModal(`<h3>Subir archivo a Drive</h3>
+    <label>Cliente destino</label>
+    <select id="uClient">${opts}</select>
+    <label>Nombre en Drive</label>
+    <input type="text" id="uName" placeholder="documento.pdf">
+    <div class="udrop" onclick="document.getElementById('uFile').click()">
+      <i class="ti ti-cloud-upload" aria-hidden="true" style="font-size:20px;display:block;margin-bottom:4px;"></i>
+      Clic para seleccionar archivo
+      <input type="file" id="uFile" style="display:none" onchange="onFileSelect(this)">
+    </div>
+    <div id="uInfo" style="font-size:11px;color:var(--color-text-secondary);margin-top:5px;"></div>
+    <div class="mac">
+      <button class="bsm" onclick="closeModal()">Cancelar</button>
+      <button class="bsm bpri" onclick="confirmUpload()"><i class="ti ti-upload" aria-hidden="true"></i> Subir</button>
+    </div>`);
+}
+
+function onFileSelect(inp) {
+  const f = inp.files[0];
+  if (!f) return;
+  document.getElementById('uInfo').textContent = f.name + ' · ' + fmtSize(f.size);
+  if (!document.getElementById('uName').value) document.getElementById('uName').value = f.name;
+}
+
+async function confirmUpload() {
+  const ci = parseInt(document.getElementById('uClient').value);
+  const name = document.getElementById('uName').value.trim();
+  const inp = document.getElementById('uFile');
+  if (!name || !inp.files[0]) { alert('Selecciona un archivo y escribe un nombre.'); return; }
+  const file = inp.files[0];
+  closeModal();
+  setStatus('Leyendo archivo...', 'loading');
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    const b64 = e.target.result.split(',')[1];
+    const mime = file.type || 'application/octet-stream';
+    setStatus('Subiendo a Drive...', 'loading');
+    try {
+      await callClaude(`Use gdrive create_file tool to upload a file with: title="${name}", parentId="${clients[ci].folderId}", contentMimeType="${mime}", disableConversionToGoogleType=true, base64Content="[BASE64_CONTENT_PROVIDED]". The base64 content is: ${b64.slice(0,500)}... (first 500 chars shown). Upload it. Return ONLY JSON: {success:true, id:"..."}. No markdown.`);
+      setStatus(`"${name}" subido`);
+      if (ci === activeIdx) refresh();
+    } catch(e) { setStatus('Error al subir: '+e.message,'error'); }
+  };
+  reader.readAsDataURL(file);
+}
+
+function openAddClient() {
+  openModal(`<h3>Agregar cliente</h3>
+    <label>Nombre</label>
+    <input type="text" id="nName" placeholder="Empresa o persona">
+    <label>Link de carpeta en Drive</label>
+    <input type="text" id="nLink" placeholder="https://drive.google.com/drive/folders/...">
+    <p>Pega el link completo de la carpeta de Drive.</p>
+    <div class="mac">
+      <button class="bsm" onclick="closeModal()">Cancelar</button>
+      <button class="bsm bpri" onclick="confirmAdd()"><i class="ti ti-check" aria-hidden="true"></i> Agregar</button>
+    </div>`);
+  setTimeout(()=>document.getElementById('nName')?.focus(),80);
+}
+
+function confirmAdd() {
+  const name = document.getElementById('nName').value.trim();
+  const link = document.getElementById('nLink').value.trim();
+  if (!name || !link) { alert('Completa todos los campos.'); return; }
+  const m = link.match(/\/folders\/([a-zA-Z0-9_-]+)/);
+  if (!m) { alert('Link inválido. Copia el link de una carpeta de Drive.'); return; }
+  clients.push({ name, folderId: m[1], link });
+  save();
+  closeModal();
+  renderClients();
+  selectClient(clients.length-1);
+}
+
+function openModal(html) {
+  document.getElementById('mc').innerHTML = `<div class="ov" onclick="if(event.target===this)closeModal()"><div class="mo">${html}</div></div>`;
+}
+function closeModal() { document.getElementById('mc').innerHTML = ''; }
+
+renderClients();
+</script>
