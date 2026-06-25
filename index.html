@@ -1,0 +1,2398 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Gestor de Clientes — Drive</title>
+
+<!-- PWA -->
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#015767">
+<link rel="icon" type="image/png" href="./favicon.png">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Gestor Clientes">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  :root{
+    --purple:#015767;--purple-light:#E3EFF1;--purple-mid:#7FA9B2;
+    --gray-bg:#F6F8F8;--gray-border:#E2E6E6;--gray-text:#5C6B6E;
+    --text:#1C2E31;--white:#fff;--danger:#A32D2D;--danger-bg:#FCEBEB;
+    --success:#3B6D11;--success-bg:#EAF3DE;
+    --accent:#FFD269;--accent-dark:#27434A;
+    --radius:10px;--radius-sm:6px;
+    --font:'Inter',system-ui,sans-serif;
+    --header-h:52px;
+  }
+  html,body{width:100%;max-width:100%;overflow-x:hidden;}
+  body{font-family:var(--font);background:var(--gray-bg);color:var(--text);height:100vh;display:flex;flex-direction:column;}
+
+  /* LOGIN / REGISTER / FORGOT (cuenta de la app) */
+  #loginScreen{flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:20px;}
+
+  /* AUTH SCREEN (conexión a Google Drive) */
+  #authScreen{flex:1;display:none;align-items:center;justify-content:center;flex-direction:column;gap:20px;}
+  .auth-card{background:var(--white);border-radius:16px;border:1px solid var(--gray-border);padding:40px 48px;text-align:center;max-width:380px;width:90%;}
+  .auth-card h1{font-size:22px;font-weight:600;margin-bottom:6px;}
+  .auth-card p{font-size:14px;color:var(--gray-text);margin-bottom:24px;line-height:1.5;}
+  .auth-card .form-group{text-align:left;}
+  .auth-btn{display:inline-flex;align-items:center;gap:10px;padding:11px 22px;background:var(--purple);color:#fff;border:none;border-radius:var(--radius-sm);font-size:14px;font-weight:500;cursor:pointer;text-decoration:none;font-family:var(--font);}
+  .auth-btn:hover{background:var(--accent-dark);}
+  .auth-btn svg{width:18px;height:18px;}
+  .auth-btn.full{width:100%;justify-content:center;}
+  .auth-btn[disabled]{opacity:.6;cursor:not-allowed;}
+  .auth-switch{font-size:12px;color:var(--gray-text);margin-top:12px;}
+  .auth-switch a{color:var(--purple);cursor:pointer;font-weight:500;}
+  .auth-switch a:hover{text-decoration:underline;}
+  .auth-account-note{font-size:12px;color:var(--gray-text);margin-top:4px;}
+  .auth-account-note a{color:var(--purple);cursor:pointer;font-weight:500;}
+  .install-btn-auth{display:none;align-items:center;gap:8px;padding:9px 18px;background:none;color:var(--purple);border:1px solid var(--purple-mid);border-radius:var(--radius-sm);font-size:13px;font-weight:500;cursor:pointer;font-family:var(--font);margin:0 auto;}
+  .install-btn-auth:hover{background:var(--purple-light);}
+
+  /* APP */
+  #appScreen{flex:1;display:none;flex-direction:column;overflow:hidden;}
+
+  /* HEADER */
+  .header{background:var(--white);border-bottom:1px solid var(--gray-border);box-shadow:0 2px 0 var(--accent);padding:0 20px;height:var(--header-h);display:flex;align-items:center;gap:14px;}
+  .menu-toggle{display:none;width:30px;height:30px;border:none;background:none;cursor:pointer;color:var(--text);align-items:center;justify-content:center;flex-shrink:0;border-radius:6px;}
+  .menu-toggle:hover{background:var(--gray-bg);}
+  .header-logo{font-size:15px;font-weight:600;color:var(--purple);display:flex;align-items:center;gap:7px;white-space:nowrap;}
+  .header-logo svg{width:18px;height:18px;flex-shrink:0;}
+  .header-spacer{flex:1;}
+  .user-info{font-size:12px;color:var(--gray-text);display:flex;align-items:center;gap:8px;}
+  .user-avatar{width:28px;height:28px;border-radius:50%;background:var(--purple-light);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--purple);flex-shrink:0;}
+  .logout-btn{font-size:12px;color:var(--gray-text);background:none;border:1px solid var(--gray-border);border-radius:var(--radius-sm);padding:4px 10px;cursor:pointer;white-space:nowrap;}
+  .logout-btn:hover{border-color:var(--purple);color:var(--purple);}
+
+  /* NOTIF BELL */
+  .notif-btn{position:relative;flex-shrink:0;}
+  .notif-badge{position:absolute;top:-3px;right:-3px;background:var(--danger);color:#fff;font-size:9px;font-weight:700;min-width:15px;height:15px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 3px;line-height:1;}
+  .notif-panel{position:absolute;top:calc(var(--header-h) + 6px);right:16px;width:330px;max-width:92vw;max-height:430px;overflow-y:auto;background:#fff;border:1px solid var(--gray-border);border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.18);z-index:250;}
+  .notif-panel-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--gray-border);gap:8px;flex-wrap:wrap;}
+  .notif-panel-head h4{font-size:13px;font-weight:600;}
+  .notif-panel-actions{display:flex;gap:10px;}
+  .notif-link{font-size:11px;color:var(--purple);background:none;border:none;cursor:pointer;font-weight:500;}
+  .notif-link:hover{text-decoration:underline;}
+  .notif-item{padding:10px 14px;border-bottom:1px solid var(--gray-border);font-size:12px;cursor:pointer;display:flex;gap:8px;}
+  .notif-item:last-child{border-bottom:none;}
+  .notif-item:hover{background:var(--gray-bg);}
+  .notif-item.unread{background:var(--purple-light);}
+  .notif-dot2{width:7px;height:7px;border-radius:50%;background:var(--purple);margin-top:5px;flex-shrink:0;}
+  .notif-item.read .notif-dot2{background:var(--gray-border);}
+  .notif-txt b{font-weight:600;}
+  .notif-meta{font-size:10px;color:var(--gray-text);margin-top:2px;}
+  .notif-empty{padding:30px 16px;text-align:center;font-size:12px;color:var(--gray-text);line-height:1.5;}
+
+  /* LAYOUT */
+  .layout{flex:1;display:flex;overflow:hidden;position:relative;}
+
+  /* SIDEBAR */
+  .sidebar{width:220px;min-width:220px;background:var(--white);border-right:1px solid var(--gray-border);display:flex;flex-direction:column;overflow:hidden;}
+  .sidebar-head{padding:14px 14px 10px;border-bottom:1px solid var(--gray-border);display:flex;align-items:center;justify-content:space-between;}
+  .sidebar-head span{font-size:11px;font-weight:600;color:var(--gray-text);text-transform:uppercase;letter-spacing:.06em;}
+  .icon-btn-round{width:24px;height:24px;border-radius:50%;border:1px solid var(--gray-border);background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--gray-text);}
+  .icon-btn-round:hover{border-color:var(--purple);color:var(--purple);}
+  .sidebar-search{padding:8px 10px;border-bottom:1px solid var(--gray-border);}
+  .sidebar-search input{width:100%;padding:6px 10px;border:1px solid var(--gray-border);border-radius:8px;font-size:13px;outline:none;background:var(--gray-bg);color:var(--dark);box-sizing:border-box;}
+  .sidebar-search input:focus{border-color:var(--purple);background:#fff;}
+  .client-list{flex:1;overflow-y:auto;padding:6px 0;}
+  .client-item{display:flex;align-items:center;gap:9px;padding:8px 14px;cursor:pointer;border-left:2.5px solid transparent;transition:background .1s;}
+  .client-item:hover{background:var(--gray-bg);}
+  .client-item.active{background:var(--purple-light);border-left-color:var(--purple);}
+  .client-av{width:28px;height:28px;border-radius:50%;background:var(--purple-light);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:var(--purple);flex-shrink:0;}
+  .client-item.active .client-av{background:var(--purple);color:#fff;}
+  .client-name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .client-item-actions{display:flex;gap:2px;opacity:0;margin-left:auto;flex-shrink:0;}
+  .client-item:hover .client-item-actions{opacity:1;}
+  .client-item-edit,.client-item-del{background:none;border:none;cursor:pointer;color:var(--gray-text);padding:3px 4px;border-radius:4px;font-size:12px;line-height:1;}
+  .client-item-edit:hover{color:var(--purple);background:var(--purple-light);}
+  .client-item-del:hover{color:var(--danger);background:var(--danger-bg);}
+  .client-wa-tag{font-size:9px;color:var(--success);background:var(--success-bg);padding:1px 5px;border-radius:8px;margin-left:4px;flex-shrink:0;white-space:nowrap;}
+
+  .sidebar-backdrop{display:none;position:fixed;top:var(--header-h);left:0;right:0;bottom:0;background:rgba(0,0,0,.35);z-index:140;}
+  .sidebar-backdrop.show{display:block;}
+
+  /* MAIN */
+  .main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;}
+  .topbar{padding:10px 16px;border-bottom:1px solid var(--gray-border);display:flex;align-items:center;gap:8px;background:var(--white);flex-wrap:wrap;}
+  .breadcrumb{display:flex;align-items:center;gap:4px;flex:1;font-size:13px;overflow:hidden;}
+  .bc-item{color:var(--gray-text);cursor:pointer;white-space:nowrap;padding:2px 4px;border-radius:4px;}
+  .bc-item:hover{color:var(--purple);background:var(--purple-light);}
+  .bc-cur{color:var(--text);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .bc-sep{color:var(--gray-border);font-size:16px;}
+  .top-actions{display:flex;gap:6px;flex-wrap:wrap;}
+  .btn{padding:6px 12px;font-size:12px;border-radius:var(--radius-sm);border:1px solid var(--gray-border);background:var(--white);color:var(--gray-text);cursor:pointer;display:inline-flex;align-items:center;gap:5px;font-family:var(--font);white-space:nowrap;}
+  .btn:hover{border-color:var(--purple);color:var(--purple);}
+  .btn-primary{background:var(--purple);color:#fff;border-color:var(--purple);}
+  .btn-primary:hover{background:var(--accent-dark);color:#fff;border-color:var(--accent-dark);}
+  .btn-danger{color:var(--danger);border-color:var(--danger);}
+  .btn-danger:hover{background:var(--danger-bg);}
+  .btn-wa{color:var(--success);border-color:var(--success);}
+  .btn-wa:hover{background:var(--success-bg);color:var(--success);}
+  .btn[disabled]{opacity:.5;cursor:not-allowed;}
+
+  /* FILE AREA */
+  .file-area{flex:1;overflow:auto;padding:0;}
+  .file-table{width:100%;border-collapse:collapse;min-width:560px;}
+  .file-table th{font-size:11px;color:var(--gray-text);font-weight:500;text-transform:uppercase;letter-spacing:.05em;padding:8px 16px;border-bottom:1px solid var(--gray-border);background:var(--gray-bg);text-align:left;position:sticky;top:0;z-index:1;}
+  .file-table td{padding:7px 16px;border-bottom:1px solid var(--gray-border);font-size:13px;vertical-align:middle;}
+  .file-table tr:last-child td{border-bottom:none;}
+  .file-table tr:hover td{background:#F4F4FF;}
+  .chk-cell{width:34px;text-align:center;padding-right:0 !important;}
+  .chk-cell input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--purple);}
+  .file-row-actions{display:flex;gap:3px;opacity:0;}
+  .file-table tr:hover .file-row-actions{opacity:1;}
+  .ia{width:26px;height:26px;border-radius:var(--radius-sm);border:none;background:transparent;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;color:var(--gray-text);}
+  .ia:hover{background:var(--purple-light);color:var(--purple);}
+  .ia.del:hover{background:var(--danger-bg);color:var(--danger);}
+  .file-icon{display:inline-flex;align-items:center;gap:8px;}
+  .fi-dot{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
+  .fi-folder{background:#E8E6FF;color:var(--purple);}
+  .fi-pdf{background:#FCEAE7;color:#C0392B;}
+  .fi-sheet{background:#E8F5E9;color:#2E7D32;}
+  .fi-doc{background:#E3F2FD;color:#1565C0;}
+  .fi-img{background:#FFF8E1;color:#F57F17;}
+  .fi-default{background:var(--gray-bg);color:var(--gray-text);}
+  .name-cell{cursor:pointer;}
+  .name-cell:hover .fn-text{text-decoration:underline;color:var(--purple);}
+  .rename-input{font-size:13px;border:1.5px solid var(--purple);border-radius:var(--radius-sm);padding:2px 8px;background:var(--white);color:var(--text);font-family:var(--font);outline:none;width:100%;}
+  .meta-cell{color:var(--gray-text);}
+
+  .empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;height:300px;gap:10px;color:var(--gray-text);}
+  .empty-state svg{opacity:.2;width:48px;height:48px;}
+  .empty-state p{font-size:14px;}
+  .empty-state small{font-size:12px;opacity:.7;}
+
+  /* STATUS */
+  .statusbar{padding:6px 16px;border-top:1px solid var(--gray-border);background:var(--white);font-size:11px;color:var(--gray-text);display:flex;align-items:center;gap:7px;}
+  .dot{width:6px;height:6px;border-radius:50%;background:#639922;flex-shrink:0;}
+  .dot.loading{background:#BA7517;animation:pulse 1s infinite;}
+  .dot.error{background:var(--danger);}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+  /* MODAL */
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:200;backdrop-filter:blur(2px);padding:16px;}
+  .modal-overlay.layer2{z-index:260;}
+  .modal{background:var(--white);border-radius:14px;border:1px solid var(--gray-border);padding:22px;width:380px;max-width:95vw;max-height:90vh;overflow-y:auto;}
+  .modal h3{font-size:15px;font-weight:600;margin-bottom:4px;}
+  .modal-sub{font-size:13px;color:var(--gray-text);margin-bottom:16px;line-height:1.5;}
+  .modal-sub a{color:var(--purple);}
+  .form-group{margin-bottom:12px;}
+  .form-group label{display:block;font-size:11px;font-weight:500;color:var(--gray-text);margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em;}
+  .form-group input,.form-group select,.form-group textarea{width:100%;padding:8px 11px;font-size:13px;border:1px solid var(--gray-border);border-radius:var(--radius-sm);background:var(--white);color:var(--text);font-family:var(--font);outline:none;resize:vertical;}
+  .form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--purple);}
+  .checkbox-row{display:flex;align-items:flex-start;gap:8px;}
+  .checkbox-row input[type=checkbox]{width:auto;flex-shrink:0;margin-top:2px;accent-color:var(--purple);}
+  .checkbox-row label{margin:0;text-transform:none;font-size:12px;font-weight:400;color:var(--gray-text);line-height:1.4;}
+  .modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:18px;flex-wrap:wrap;}
+  .drop-zone{border:2px dashed var(--gray-border);border-radius:var(--radius);padding:20px;text-align:center;cursor:pointer;transition:.15s;}
+  .drop-zone:hover,.drop-zone.drag{border-color:var(--purple);background:var(--purple-light);}
+  .drop-zone svg{width:28px;height:28px;color:var(--gray-text);margin-bottom:6px;}
+  .drop-zone p{font-size:13px;color:var(--gray-text);}
+  .drop-zone small{font-size:11px;color:var(--gray-text);opacity:.7;}
+  .file-selected{font-size:12px;background:var(--success-bg);color:var(--success);padding:6px 10px;border-radius:var(--radius-sm);margin-top:8px;display:none;}
+  .progress-bar{height:4px;background:var(--gray-border);border-radius:2px;overflow:hidden;margin-top:8px;display:none;}
+  .progress-fill{height:100%;background:var(--purple);transition:width .3s;}
+  .dest-row{display:flex;align-items:center;gap:6px;}
+  .dest-path{flex:1;font-size:12px;color:var(--gray-text);background:var(--gray-bg);padding:7px 10px;border-radius:6px;border:1px solid var(--gray-border);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .picker-list{max-height:260px;overflow-y:auto;border:1px solid var(--gray-border);border-radius:8px;margin-bottom:6px;}
+  .picker-empty{padding:16px;font-size:12px;color:var(--gray-text);text-align:center;}
+
+  /* TOAST */
+  .toast-container{position:fixed;bottom:20px;right:20px;display:flex;flex-direction:column;gap:8px;z-index:300;max-width:90vw;}
+  .toast{background:var(--text);color:#fff;padding:10px 16px;border-radius:var(--radius-sm);font-size:13px;animation:slideIn .2s ease;max-width:300px;}
+  .toast.success{background:#3B6D11;}
+  .toast.error{background:var(--danger);}
+  @keyframes slideIn{from{transform:translateY(10px);opacity:0}to{transform:translateY(0);opacity:1}}
+
+  /* LOADING SPINNER */
+  .spinner{width:16px;height:16px;border:2px solid var(--gray-border);border-top-color:var(--purple);border-radius:50%;animation:spin .7s linear infinite;display:inline-block;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  svg.icon{width:16px;height:16px;flex-shrink:0;}
+
+  /* RESPONSIVE */
+  @media (max-width:768px){
+    .menu-toggle{display:flex;}
+    .header{padding:0 10px;gap:8px;}
+    .header-logo .logo-text{display:none;}
+    .user-info span#userName{display:none;}
+    .sidebar{
+      position:fixed;top:var(--header-h);bottom:0;left:0;
+      width:80vw;max-width:300px;
+      transform:translateX(-100%);
+      transition:transform .25s ease;
+      z-index:150;box-shadow:2px 0 18px rgba(0,0,0,.18);
+    }
+    .sidebar.open{transform:translateX(0);}
+    .main{width:100%;}
+    .topbar{padding:8px 10px;gap:6px;}
+    .breadcrumb{font-size:12px;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+    .btn{padding:6px 9px;font-size:11px;}
+    .auth-card{padding:30px 22px;}
+    .notif-panel{right:8px;width:90vw;}
+    .modal{padding:16px;width:340px;}
+  }
+  @media (max-width:420px){
+    .header-logo svg{width:16px;height:16px;}
+  }
+
+  .client-item-wrap{position:relative;overflow:hidden;}
+  .client-swipe-actions{position:absolute;right:0;top:0;bottom:0;display:flex;align-items:stretch;transform:translateX(100%);transition:transform 0.2s;}
+  .client-swipe-actions.show{transform:translateX(0);}
+  .swipe-edit{background:var(--purple);color:#fff;border:none;padding:0 16px;cursor:pointer;font-size:16px;}
+  .swipe-del{background:var(--danger);color:#fff;border:none;padding:0 16px;cursor:pointer;font-size:16px;}
+
+  .ptr-indicator{display:none;align-items:center;justify-content:center;gap:8px;padding:10px;font-size:13px;color:var(--gray-text);}
+  .ptr-indicator.show{display:flex;}
+  .ptr-spin{width:16px;height:16px;border:2px solid var(--gray-border);border-top-color:var(--purple);border-radius:50%;animation:spin .7s linear infinite;}
+
+  /* ── MODO NOCTURNO: paleta gradiente #0d2630 → #1a3a47 ── */
+  body.dark{
+    --white:#132b35;--gray-bg:#0d2630;--gray-border:#1e4455;
+    --gray-text:#7fb8c8;--text:#ffffff;--dark:#ffffff;
+    --purple-light:#1a3a47;--danger-bg:#3E1E1E;
+    --surface2:#1a3a47;--surface3:#0f3040;
+  }
+  body.dark body{background:linear-gradient(160deg,#0d2630 0%,#1a3a47 100%);min-height:100vh;}
+  body.dark .header{background:linear-gradient(90deg,#0d2630,#1a3a47);border-bottom-color:#1e4455;box-shadow:0 2px 0 #015767;}
+  body.dark .header-logo{color:#ffffff;}
+  body.dark .sidebar{background:#0f3040;border-right-color:#1e4455;}
+  body.dark .topbar{background:#132b35;border-bottom-color:#1e4455;}
+  body.dark .statusbar{background:#0f3040;border-top-color:#1e4455;}
+  body.dark .file-table th{background:#0d2630;color:#7fb8c8;}
+  body.dark .file-table td{border-bottom-color:#1e4455;color:#ffffff;}
+  body.dark .file-table tr:hover td{background:#1a3a47;}
+  body.dark .file-table tr td{background:transparent;}
+  body.dark .modal{background:#132b35;border-color:#1e4455;}
+  body.dark .modal h3,.dark .modal-sub{color:#ffffff;}
+  body.dark input,body.dark select,body.dark textarea{background:#1a3a47;color:#ffffff;border-color:#1e4455;}
+  body.dark .sidebar-search input{background:#1a3a47;color:#ffffff;}
+  body.dark .auth-card{background:#132b35;border-color:#1e4455;}
+  body.dark .btn{background:#1a3a47;color:#ffffff;border-color:#1e4455;}
+  body.dark .btn:hover{border-color:#015767;color:#ffffff;}
+  body.dark .logout-btn{background:#1a3a47;color:#ffffff;border-color:#1e4455;}
+  body.dark .notif-panel{background:#132b35;border-color:#1e4455;}
+  body.dark .notif-item{border-bottom-color:#1e4455;color:#ffffff;}
+  body.dark .notif-item.unread{background:#1a3a47;}
+  body.dark .client-item:hover{background:#1a3a47;}
+  body.dark .client-item.active{background:#1a3a47;border-left-color:#015767;}
+  body.dark .meta-cell{color:#7fb8c8;}
+  body.dark .bc-item{color:#7fb8c8;}
+  body.dark .bc-cur{color:#ffffff;}
+  body.dark .empty-state{color:#7fb8c8;}
+  /* fila seleccionada en dark: fondo visible con texto blanco */
+  body.dark .file-table tr:has(.file-chk:checked) td{background:#1e4455 !important;color:#ffffff;}
+  .dark-toggle{background:none;border:none;cursor:pointer;font-size:18px;padding:4px 6px;border-radius:8px;}
+  .dark-toggle:hover{background:var(--gray-bg);}
+
+  /* ── WINDOW DROP OVERLAY ── */
+  .window-drop-overlay{position:fixed;inset:0;background:rgba(1,87,103,.18);border:3px dashed var(--purple);z-index:400;display:none;align-items:center;justify-content:center;flex-direction:column;gap:12px;pointer-events:none;}
+  .window-drop-overlay.active{display:flex;}
+  .window-drop-overlay svg{width:56px;height:56px;color:var(--purple);opacity:.85;}
+  .window-drop-overlay p{font-size:18px;font-weight:600;color:var(--purple);}
+
+  /* ── MULTI-UPLOAD QUEUE ── */
+  .upload-queue{max-height:200px;overflow-y:auto;border:1px solid var(--gray-border);border-radius:8px;margin-top:10px;}
+  .upload-queue-item{display:flex;align-items:center;gap:8px;padding:7px 12px;border-bottom:1px solid var(--gray-border);font-size:12px;}
+  .upload-queue-item:last-child{border-bottom:none;}
+  .uqi-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .uqi-size{color:var(--gray-text);white-space:nowrap;flex-shrink:0;}
+  .uqi-status{width:18px;height:18px;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+  .uqi-remove{background:none;border:none;cursor:pointer;color:var(--gray-text);font-size:14px;padding:0 2px;line-height:1;}
+  .uqi-remove:hover{color:var(--danger);}
+  .upload-summary{font-size:12px;color:var(--gray-text);margin-top:6px;padding:0 2px;}
+
+  /* ── UNZIP ── */
+  .unzip-file-list{max-height:160px;overflow-y:auto;border:1px solid var(--gray-border);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--gray-text);margin-bottom:10px;}
+
+  .preview-overlay{position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:300;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;}
+  .preview-header{width:100%;max-width:900px;display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+  .preview-title{color:#fff;font-size:14px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:70%;}
+  .preview-close{background:rgba(255,255,255,.15);border:none;color:#fff;font-size:20px;width:36px;height:36px;border-radius:50%;cursor:pointer;}
+  .preview-close:hover{background:rgba(255,255,255,.3);}
+  .preview-body{width:100%;max-width:900px;max-height:78vh;display:flex;align-items:center;justify-content:center;}
+  .preview-body img{max-width:100%;max-height:78vh;object-fit:contain;border-radius:8px;}
+  .preview-body iframe{width:100%;height:78vh;border:none;border-radius:8px;background:#fff;}
+  .preview-actions{margin-top:14px;display:flex;gap:10px;}
+  .preview-btn{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);color:#fff;padding:8px 16px;border-radius:8px;font-size:13px;cursor:pointer;}
+  .preview-btn:hover{background:rgba(255,255,255,.3);}
+</style>
+</head>
+<body>
+
+<!-- LOGIN / REGISTRO / RECUPERAR CONTRASEÑA (cuenta de la app) -->
+<div id="loginScreen">
+  <div class="auth-card">
+    <div style="width:52px;height:52px;background:var(--purple-light);border-radius:14px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#015767" stroke-width="2" width="28" height="28"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    </div>
+
+    <!-- LOGIN -->
+    <div id="viewLogin">
+      <h1>Gestor de Clientes</h1>
+      <p>Inicia sesión para acceder a tus clientes desde cualquier dispositivo.</p>
+      <div class="form-group">
+        <label>Correo electrónico</label>
+        <input type="email" id="loginEmail" placeholder="tucorreo@ejemplo.com" autocomplete="username">
+      </div>
+      <div class="form-group">
+        <label>Contraseña</label>
+        <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <button class="auth-btn full" id="loginBtn" onclick="doLogin()">Iniciar sesión</button>
+      <div class="auth-switch"><a onclick="showAuthView('forgot')">¿Olvidaste tu contraseña?</a></div>
+      <div class="auth-switch">¿No tienes cuenta? <a onclick="showAuthView('register')">Regístrate</a></div>
+    </div>
+
+    <!-- REGISTRO -->
+    <div id="viewRegister" style="display:none;">
+      <h1>Crear cuenta</h1>
+      <p>Tus clientes quedarán guardados en la nube y disponibles en cualquier dispositivo en el que inicies sesión.</p>
+      <div class="form-group">
+        <label>Nombre</label>
+        <input type="text" id="regName" placeholder="Tu nombre">
+      </div>
+      <div class="form-group">
+        <label>Correo electrónico</label>
+        <input type="email" id="regEmail" placeholder="tucorreo@ejemplo.com" autocomplete="username">
+      </div>
+      <div class="form-group">
+        <label>Contraseña</label>
+        <input type="password" id="regPassword" placeholder="Mínimo 6 caracteres" autocomplete="new-password">
+      </div>
+      <div class="form-group">
+        <label>Confirmar contraseña</label>
+        <input type="password" id="regPassword2" placeholder="Repite la contraseña" autocomplete="new-password" onkeydown="if(event.key==='Enter')doRegister()">
+      </div>
+      <button class="auth-btn full" id="regBtn" onclick="doRegister()">Crear cuenta</button>
+      <div class="auth-switch">¿Ya tienes cuenta? <a onclick="showAuthView('login')">Inicia sesión</a></div>
+    </div>
+
+    <!-- OLVIDÉ MI CONTRASEÑA -->
+    <div id="viewForgot" style="display:none;">
+      <h1>Recuperar contraseña</h1>
+      <p>Escribe tu correo registrado y te enviaremos un enlace para crear una nueva contraseña.</p>
+      <div class="form-group">
+        <label>Correo electrónico</label>
+        <input type="email" id="forgotEmail" placeholder="tucorreo@ejemplo.com" onkeydown="if(event.key==='Enter')doForgotPassword()">
+      </div>
+      <button class="auth-btn full" id="forgotBtn" onclick="doForgotPassword()">Enviar enlace de recuperación</button>
+      <div class="auth-switch"><a onclick="showAuthView('login')">‹ Volver a iniciar sesión</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- AUTH SCREEN -->
+<div id="authScreen">
+  <div class="auth-card">
+    <div style="width:52px;height:52px;background:var(--purple-light);border-radius:14px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#015767" stroke-width="2" width="28" height="28"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    </div>
+    <h1>Gestor de Clientes</h1>
+    <p>Conecta tu cuenta de Google para gestionar los documentos de tus clientes directamente desde Drive.</p>
+    <button class="auth-btn" onclick="startAuth()">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#fff"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#fff"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#fff"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#fff"/></svg>
+      Conectar con Google
+    </button>
+    <button class="install-btn-auth install-btn" onclick="triggerInstall()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path d="M12 3v12"/><polyline points="7 11 12 16 17 11"/><path d="M5 19h14"/></svg>
+      Instalar app en este dispositivo
+    </button>
+    <div class="auth-account-note">
+      Conectado como <strong id="accountEmailLabel"></strong> · <a onclick="logout()">Cerrar sesión</a>
+    </div>
+  </div>
+</div>
+
+<!-- APP SCREEN -->
+<div id="appScreen">
+  <div class="header">
+    <button class="menu-toggle" onclick="toggleSidebar(true)" title="Menú">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <div class="header-logo" onclick="goHome()" style="cursor:pointer;" title="Inicio">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      <span class="logo-text">Gestor de Clientes</span>
+    </div>
+    <div class="header-spacer"></div>
+    <button class="icon-btn-round install-btn" style="display:none;" onclick="triggerInstall()" title="Instalar app">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path d="M12 3v12"/><polyline points="7 11 12 16 17 11"/><path d="M5 19h14"/></svg>
+    </button>
+    <button class="dark-toggle" id="darkToggle" onclick="toggleDark()" title="Modo oscuro">🌙</button>
+    <button class="icon-btn-round notif-btn" id="notifBtn" onclick="toggleNotifPanel()" title="Notificaciones">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      <span class="notif-badge" id="notifBadge" style="display:none;">0</span>
+    </button>
+    <div class="user-info">
+      <div class="user-avatar" id="userAvatar">?</div>
+      <span id="userName"></span>
+      <button class="logout-btn" onclick="logout()">Salir</button>
+    </div>
+  </div>
+  <div id="notifPanelContainer"></div>
+  <div class="layout">
+    <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleSidebar(false)"></div>
+    <div class="sidebar" id="sidebar">
+      <div class="sidebar-head">
+        <span>Clientes</span>
+        <button class="icon-btn-round" onclick="openAddClient()" title="Agregar cliente">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+      </div>
+      <div class="sidebar-search"><input type="text" id="clientSearch" placeholder="🔍 Buscar cliente..." oninput="renderClients()" autocomplete="off"></div>
+      <div class="client-list" id="clientList">
+        <div style="padding:14px;font-size:12px;color:var(--gray-text);">Sin clientes aún.<br>Agrega uno con el botón +</div>
+      </div>
+    </div>
+    <div class="main">
+      <div class="topbar">
+        <div class="breadcrumb" id="breadcrumb">
+          <span style="color:var(--gray-text);font-size:13px;">Selecciona un cliente</span>
+        </div>
+        <div class="top-actions" id="topActions" style="display:none;">
+          <button class="btn btn-wa" id="waBtn" style="display:none;" onclick="openWhatsappSend()">
+            <svg class="icon" viewBox="0 0 24 24" fill="currentColor" width="13" height="13"><path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38a9.9 9.9 0 0 0 4.79 1.22h.01c5.46 0 9.9-4.45 9.9-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2z"/></svg>
+            Enviar (<span class="wa-count">0</span>)
+          </button>
+          <button class="btn" id="dlMultiBtn" style="display:none;" onclick="downloadSelected()" title="Descargar seleccionados">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"/><polyline points="7 11 12 16 17 11"/><path d="M5 19h14"/></svg>
+            Descargar (<span class="dl-count">0</span>)
+          </button>
+          <button class="btn" id="zipBtn" style="display:none;" onclick="zipSelected()" title="Comprimir seleccionados">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            ZIP (<span class="zip-count">0</span>)
+          </button>
+          <button class="btn" onclick="openCreateFolder()">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
+            Carpeta
+          </button>
+          <button class="btn" onclick="openUpload()">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+            Subir
+          </button>
+          <button class="btn" onclick="refresh()" title="Actualizar">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="ptr-indicator" id="ptrIndicator"><div class="ptr-spin"></div><span>Actualizando...</span></div>
+  <div class="file-area" id="fileArea">
+        <div class="empty-state">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <p>Selecciona un cliente</p>
+          <small>para ver sus archivos de Drive</small>
+        </div>
+      </div>
+      <div class="statusbar">
+        <div class="dot" id="statusDot"></div>
+        <span id="statusText">Listo</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- WINDOW DROP OVERLAY -->
+<div class="window-drop-overlay" id="windowDropOverlay">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+  <p>Suelta los archivos para subirlos</p>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+<div id="modalContainer"></div>
+<div id="modalContainer2"></div>
+<div id="previewContainer"></div>
+
+<!-- Firebase (cuentas + base de datos en la nube) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<script>
+// ─── CONFIG ───────────────────────────────────────────────────────────────────
+const CLIENT_ID = '150200435432-a2b0ltb6p5qec1lvmc1l7v43a09th0kf.apps.googleusercontent.com';
+const REDIRECT_URI = window.location.origin + window.location.pathname;
+const SCOPES = 'https://www.googleapis.com/auth/drive openid profile email';
+const DRIVE_API = 'https://www.googleapis.com/drive/v3';
+const UPLOAD_API = 'https://www.googleapis.com/upload/drive/v3';
+
+// ─── FIREBASE (cuenta de la app + base de datos) ───────────────────────────────
+// 1) Crea un proyecto gratis en https://console.firebase.google.com
+// 2) Authentication → Sign-in method → activa "Correo electrónico/contraseña"
+// 3) Firestore Database → crea la base de datos, luego pega las reglas de seguridad
+//    que vienen en FIREBASE_SETUP.md (pestaña "Reglas")
+// 4) Configuración del proyecto → Tus apps → app Web → copia el objeto de config aquí:
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyD5_Lr9YBG_rNv8FT77WHnbnQcay119ESE",
+  authDomain: "clientdb-2fa94.firebaseapp.com",
+  projectId: "clientdb-2fa94",
+  storageBucket: "clientdb-2fa94.firebasestorage.app",
+  messagingSenderId: "820173816892",
+  appId: "1:820173816892:web:0d818e42294125a146af39"
+};
+firebase.initializeApp(FIREBASE_CONFIG);
+const auth = firebase.auth();
+const db = firebase.firestore();
+auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(()=>{});
+
+let currentUser = null;
+let syncTimer = null;
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let accessToken = null;
+let clients = [];
+let activeIdx = null;
+let folderStack = [];
+let currentFiles = [];
+let selectedIds = new Set();
+let uploadDestFolder = null;
+let pickerStack = [];
+let notifications = [];
+let snapshots = {};
+let notifInterval = null;
+
+function lsKey(base) { return currentUser ? (base + '_' + currentUser.uid) : base; }
+function saveClients() { try { localStorage.setItem(lsKey('driveClients_gh'), JSON.stringify(clients)); } catch(e){} scheduleSync(); }
+function loadClientsFromStorage() { try { clients = JSON.parse(localStorage.getItem(lsKey('driveClients_gh')) || '[]'); } catch(e){ clients = []; } }
+function saveSnapshots() { try { localStorage.setItem(lsKey('driveSnapshots_gh'), JSON.stringify(snapshots)); } catch(e){} scheduleSync(); }
+function loadSnapshots() { try { snapshots = JSON.parse(localStorage.getItem(lsKey('driveSnapshots_gh')) || '{}'); } catch(e){ snapshots = {}; } }
+function saveNotifications() { try { localStorage.setItem(lsKey('driveNotifs_gh'), JSON.stringify(notifications)); } catch(e){} scheduleSync(); }
+function loadNotifications() { try { notifications = JSON.parse(localStorage.getItem(lsKey('driveNotifs_gh')) || '[]'); } catch(e){ notifications = []; } }
+function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+
+// ─── SINCRONIZACIÓN CON FIRESTORE ──────────────────────────────────────────────
+function scheduleSync() {
+  if (!currentUser) return;
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(syncToFirestore, 800);
+}
+
+async function syncToFirestore() {
+  if (!currentUser) return;
+  try {
+    await db.collection('users').doc(currentUser.uid).set({
+      clients, snapshots, notifications,
+      email: currentUser.email,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+  } catch(e) {
+    console.error('Error sincronizando con el servidor', e);
+    setStatus('No se pudo guardar en el servidor (sin conexión)', 'error');
+  }
+}
+
+// Carga los datos del usuario logueado desde Firestore. Si es la primera vez
+// que entra (cuenta recién creada) y este dispositivo ya tenía clientes guardados
+// localmente (de antes de tener cuenta), los migra automáticamente a su cuenta.
+async function loadUserData(user) {
+  const docRef = db.collection('users').doc(user.uid);
+  let snap;
+  try {
+    snap = await docRef.get();
+  } catch(e) {
+    showToast('No se pudo conectar al servidor, usando datos guardados en este dispositivo', 'error');
+    loadClientsFromStorage(); loadSnapshots(); loadNotifications();
+    return;
+  }
+
+  if (snap.exists) {
+    const data = snap.data() || {};
+    clients = data.clients || [];
+    snapshots = data.snapshots || {};
+    notifications = data.notifications || [];
+    persistLocalCache();
+  } else {
+    let legacyClients = [], legacySnapshots = {}, legacyNotifs = [];
+    try { legacyClients = JSON.parse(localStorage.getItem('driveClients_gh') || '[]'); } catch(e){}
+    try { legacySnapshots = JSON.parse(localStorage.getItem('driveSnapshots_gh') || '{}'); } catch(e){}
+    try { legacyNotifs = JSON.parse(localStorage.getItem('driveNotifs_gh') || '[]'); } catch(e){}
+    clients = legacyClients;
+    snapshots = legacySnapshots;
+    notifications = legacyNotifs;
+    persistLocalCache();
+    await syncToFirestore();
+    if (legacyClients.length) showToast(`Recuperamos ${legacyClients.length} cliente(s) que tenías guardados en este dispositivo`, 'success');
+  }
+}
+
+function persistLocalCache() {
+  try { localStorage.setItem(lsKey('driveClients_gh'), JSON.stringify(clients)); } catch(e){}
+  try { localStorage.setItem(lsKey('driveSnapshots_gh'), JSON.stringify(snapshots)); } catch(e){}
+  try { localStorage.setItem(lsKey('driveNotifs_gh'), JSON.stringify(notifications)); } catch(e){}
+}
+
+// ─── AUTH: PKCE ───────────────────────────────────────────────────────────────
+function generateCodeVerifier() {
+  const array = new Uint8Array(64);
+  crypto.getRandomValues(array);
+  return btoa(String.fromCharCode(...array)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+}
+async function generateCodeChallenge(verifier) {
+  const data = new TextEncoder().encode(verifier);
+  const digest = await crypto.subtle.digest('SHA-256', data);
+  return btoa(String.fromCharCode(...new Uint8Array(digest))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+}
+
+async function startAuth() {
+  const verifier = generateCodeVerifier();
+  const challenge = await generateCodeChallenge(verifier);
+  sessionStorage.setItem('pkce_verifier', verifier);
+  const params = new URLSearchParams({
+    client_id: CLIENT_ID,
+    redirect_uri: REDIRECT_URI,
+    response_type: 'token',
+    scope: SCOPES,
+    include_granted_scopes: 'true',
+    prompt: 'select_account',
+    state: 'auth'
+  });
+  window.location.href = 'https://accounts.google.com/o/oauth2/v2/auth?' + params;
+}
+
+function handleAuthCallback() {
+  const hash = window.location.hash.substring(1);
+  const params = new URLSearchParams(hash);
+  const token = params.get('access_token');
+  const error = params.get('error');
+  if (error) { showToast('Error de autenticación: ' + error, 'error'); return false; }
+  if (token) {
+    accessToken = token;
+    const expiresIn = parseInt(params.get('expires_in') || '3600');
+    localStorage.setItem('drive_token', token);
+    localStorage.setItem('drive_token_exp', Date.now() + expiresIn * 1000);
+    history.replaceState(null, '', window.location.pathname);
+    return true;
+  }
+  return false;
+}
+
+function checkStoredToken() {
+  const token = localStorage.getItem('drive_token');
+  const exp = parseInt(localStorage.getItem('drive_token_exp') || '0');
+  if (token && Date.now() < exp - 60000) { accessToken = token; return true; }
+  return false;
+}
+
+
+function initSwipe() {
+  document.querySelectorAll('.client-item[data-idx]').forEach(item => {
+    let startX = 0;
+    item.addEventListener('touchstart', e => { startX = e.touches[0].clientX; }, { passive: true });
+    item.addEventListener('touchmove', e => {
+      const dx = e.touches[0].clientX - startX;
+      const dy = e.touches[0].clientY - startX;
+      const idx = item.dataset.idx;
+      const swipe = document.getElementById('swipe-' + idx);
+      if (!swipe) return;
+      if (dx < -40) swipe.classList.add('show');
+      else if (dx > 10) swipe.classList.remove('show');
+    }, { passive: true });
+  });
+}
+
+function initPullToRefresh() {
+  const main = document.querySelector('.main');
+  if (!main) return;
+  let startY = 0;
+  main.addEventListener('touchstart', e => { if(main.scrollTop===0) startY = e.touches[0].clientY; }, { passive: true });
+  main.addEventListener('touchmove', e => {
+    const dy = e.touches[0].clientY - startY;
+    if (dy > 70 && main.scrollTop === 0) document.getElementById('ptrIndicator').classList.add('show');
+  }, { passive: true });
+  main.addEventListener('touchend', () => {
+    const ind = document.getElementById('ptrIndicator');
+    if (ind && ind.classList.contains('show')) {
+      ind.classList.remove('show');
+      if (activeIdx !== null) loadFolder(folderStack[folderStack.length-1].id);
+    }
+  }, { passive: true });
+}
+
+
+function toggleDark() {
+  const isDark = document.body.classList.toggle('dark');
+  localStorage.setItem('darkMode', isDark ? '1' : '0');
+  document.getElementById('darkToggle').textContent = isDark ? '☀️' : '🌙';
+}
+(function(){ if(localStorage.getItem('darkMode')==='1') document.body.classList.add('dark'); })();
+
+function goHome() {
+  // Deselect client and show the "Selecciona un cliente" screen
+  activeIdx = null;
+  document.querySelectorAll('.client-item').forEach(el => el.classList.remove('active'));
+  document.getElementById('fileArea').innerHTML = '<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><p>Selecciona un cliente</p><small>para ver sus archivos de Drive</small></div>';
+  toggleSidebar(false);
+}
+
+function logout() {
+  // Cierra sesión completa: cuenta de la app (Firebase) + conexión a Drive.
+  localStorage.removeItem('drive_token');
+  localStorage.removeItem('drive_token_exp');
+  accessToken = null;
+  if (notifInterval) { clearInterval(notifInterval); notifInterval = null; }
+  auth.signOut().catch(()=>{});
+  // onAuthStateChanged se encarga de mostrar loginScreen
+}
+
+function driveSessionExpired() {
+  // Solo se cerró la sesión de Drive (token vencido); la cuenta de la app sigue activa.
+  localStorage.removeItem('drive_token');
+  localStorage.removeItem('drive_token_exp');
+  accessToken = null;
+  if (notifInterval) { clearInterval(notifInterval); notifInterval = null; }
+  document.getElementById('authScreen').style.display = 'flex';
+  document.getElementById('appScreen').style.display = 'none';
+}
+
+// ─── CUENTA DE LA APP (Firebase: login / registro / recuperar contraseña) ─────
+function showAuthView(view) {
+  document.getElementById('viewLogin').style.display = view === 'login' ? 'block' : 'none';
+  document.getElementById('viewRegister').style.display = view === 'register' ? 'block' : 'none';
+  document.getElementById('viewForgot').style.display = view === 'forgot' ? 'block' : 'none';
+}
+
+function mapFirebaseError(e) {
+  const map = {
+    'auth/email-already-in-use': 'Ese correo ya está registrado. Intenta iniciar sesión.',
+    'auth/invalid-email': 'El correo no es válido.',
+    'auth/weak-password': 'La contraseña es muy débil (mínimo 6 caracteres).',
+    'auth/user-not-found': 'No existe una cuenta con ese correo.',
+    'auth/wrong-password': 'Contraseña incorrecta.',
+    'auth/invalid-credential': 'Correo o contraseña incorrectos.',
+    'auth/too-many-requests': 'Demasiados intentos. Espera unos minutos e intenta de nuevo.',
+    'auth/network-request-failed': 'Error de conexión. Revisa tu internet.',
+    'auth/missing-password': 'Escribe tu contraseña.'
+  };
+  return map[e?.code] || ('Error: ' + (e?.message || 'algo salió mal'));
+}
+
+async function doLogin() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass = document.getElementById('loginPassword').value;
+  if (!email || !pass) { showToast('Completa correo y contraseña', 'error'); return; }
+  const btn = document.getElementById('loginBtn');
+  btn.disabled = true; btn.textContent = 'Ingresando...';
+  try {
+    await auth.signInWithEmailAndPassword(email, pass);
+  } catch(e) {
+    showToast(mapFirebaseError(e), 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Iniciar sesión';
+  }
+}
+
+async function doRegister() {
+  const name = document.getElementById('regName').value.trim();
+  const email = document.getElementById('regEmail').value.trim();
+  const pass = document.getElementById('regPassword').value;
+  const pass2 = document.getElementById('regPassword2').value;
+  if (!name) { showToast('Escribe tu nombre', 'error'); return; }
+  if (!email) { showToast('Escribe tu correo', 'error'); return; }
+  if (pass.length < 6) { showToast('La contraseña debe tener al menos 6 caracteres', 'error'); return; }
+  if (pass !== pass2) { showToast('Las contraseñas no coinciden', 'error'); return; }
+  const btn = document.getElementById('regBtn');
+  btn.disabled = true; btn.textContent = 'Creando cuenta...';
+  try {
+    const cred = await auth.createUserWithEmailAndPassword(email, pass);
+    try { await cred.user.updateProfile({ displayName: name }); } catch(e){}
+    showToast('Cuenta creada. ¡Bienvenido/a!', 'success');
+  } catch(e) {
+    showToast(mapFirebaseError(e), 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Crear cuenta';
+  }
+}
+
+async function doForgotPassword() {
+  const email = document.getElementById('forgotEmail').value.trim();
+  if (!email) { showToast('Escribe tu correo', 'error'); return; }
+  const btn = document.getElementById('forgotBtn');
+  btn.disabled = true; btn.textContent = 'Enviando...';
+  try {
+    await auth.sendPasswordResetEmail(email);
+    showToast('Te enviamos un correo con el enlace de recuperación', 'success');
+    showAuthView('login');
+  } catch(e) {
+    showToast(mapFirebaseError(e), 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Enviar enlace de recuperación';
+  }
+}
+
+// ─── DRIVE API ────────────────────────────────────────────────────────────────
+async function driveRequest(path, options={}) {
+  const url = path.startsWith('http') ? path : DRIVE_API + path;
+  const res = await fetch(url, {
+    ...options,
+    headers: { 'Authorization': 'Bearer ' + accessToken, 'Content-Type': 'application/json', ...(options.headers||{}) }
+  });
+  if (res.status === 401) { driveSessionExpired(); throw new Error('Sesión de Drive expirada. Vuelve a conectar.'); }
+  if (!res.ok) { const e = await res.json().catch(()=>{}); throw new Error(e?.error?.message || 'Error ' + res.status); }
+  if (res.status === 204) return {};
+  return res.json();
+}
+
+async function listFiles(folderId) {
+  const q = encodeURIComponent(`'${folderId}' in parents and trashed = false`);
+  const fields = 'files(id,name,mimeType,size,modifiedTime,webViewLink,webContentLink)';
+  const data = await driveRequest(`/files?q=${q}&fields=${encodeURIComponent(fields)}&pageSize=200&orderBy=folder,name`);
+  return data.files || [];
+}
+
+async function deleteFileDrive(fileId) {
+  await driveRequest(`/files/${fileId}`, { method: 'DELETE', headers: {} });
+}
+
+async function renameFileDrive(fileId, newName) {
+  return driveRequest(`/files/${fileId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ name: newName })
+  });
+}
+
+async function getFileMetadata(fileId) {
+  return driveRequest(`/files/${fileId}?fields=id,name,mimeType,webViewLink,webContentLink,exportLinks`);
+}
+
+async function ensurePublicLink(fileId) {
+  try {
+    await driveRequest(`/files/${fileId}/permissions`, {
+      method: 'POST',
+      body: JSON.stringify({ role: 'reader', type: 'anyone' })
+    });
+  } catch(e) { /* puede que la política de la organización no lo permita; se ignora */ }
+}
+
+async function getUserInfo() {
+  const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+    headers: { 'Authorization': 'Bearer ' + accessToken }
+  });
+  return res.json();
+}
+
+async function uploadFile(file, name, parentId, onProgress) {
+  const metadata = { name, parents: [parentId] };
+  const initRes = await fetch(`${UPLOAD_API}/files?uploadType=resumable`, {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer ' + accessToken,
+      'Content-Type': 'application/json',
+      'X-Upload-Content-Type': file.type || 'application/octet-stream',
+      'X-Upload-Content-Length': file.size
+    },
+    body: JSON.stringify(metadata)
+  });
+  if (!initRes.ok) throw new Error('Error iniciando subida');
+  const uploadUrl = initRes.headers.get('Location');
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('PUT', uploadUrl);
+    xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+    xhr.upload.onprogress = (e) => { if (e.lengthComputable && onProgress) onProgress(e.loaded / e.total); };
+    xhr.onload = () => { if (xhr.status < 300) resolve(JSON.parse(xhr.responseText)); else reject(new Error('Error subiendo: ' + xhr.status)); };
+    xhr.onerror = () => reject(new Error('Error de red'));
+    xhr.send(file);
+  });
+}
+
+// ─── UI HELPERS ───────────────────────────────────────────────────────────────
+function setStatus(msg, type='ok') {
+  document.getElementById('statusText').textContent = msg;
+  const d = document.getElementById('statusDot');
+  d.className = 'dot' + (type==='loading'?' loading':type==='error'?' error':'');
+}
+
+function showToast(msg, type='') {
+  const c = document.getElementById('toastContainer');
+  const t = document.createElement('div');
+  t.className = 'toast' + (type?' '+type:'');
+  t.textContent = msg;
+  c.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
+
+function openModal(html) {
+  document.getElementById('modalContainer').innerHTML = `<div class="modal-overlay" id="modalOverlay" onclick="if(event.target===this)closeModal()"><div class="modal">${html}</div></div>`;
+}
+function closeModal() { document.getElementById('modalContainer').innerHTML = ''; }
+function openModal2(html) {
+  document.getElementById('modalContainer2').innerHTML = `<div class="modal-overlay layer2" onclick="if(event.target===this)closeModal2()"><div class="modal">${html}</div></div>`;
+}
+function closeModal2() { document.getElementById('modalContainer2').innerHTML = ''; }
+
+function initials(name) { return (name||'').split(' ').slice(0,2).map(w=>w[0]||'').join('').toUpperCase() || '?'; }
+function escH(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function escQ(s) { return String(s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+function normalizePhone(p) { return (p||'').replace(/[^\d]/g,''); }
+
+function fmtSize(b) {
+  if (!b) return '—';
+  b = parseInt(b);
+  if (b < 1024) return b + ' B';
+  if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
+  return (b/1048576).toFixed(1) + ' MB';
+}
+function fmtDate(d) {
+  if (!d) return '';
+  return new Date(d).toLocaleDateString('es-PE', {day:'2-digit',month:'short',year:'numeric'});
+}
+function fmtDateTime(d) {
+  try { return new Date(d).toLocaleString('es-PE', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}); } catch(e) { return ''; }
+}
+
+function getFileIconClass(mimeType, isFolder) {
+  if (isFolder) return 'fi-folder';
+  if (!mimeType) return 'fi-default';
+  if (mimeType.includes('pdf')) return 'fi-pdf';
+  if (mimeType.includes('sheet') || mimeType.includes('excel') || mimeType.includes('spreadsheet')) return 'fi-sheet';
+  if (mimeType.includes('document') || mimeType.includes('word')) return 'fi-doc';
+  if (mimeType.includes('image')) return 'fi-img';
+  return 'fi-default';
+}
+function getFileEmoji(mimeType, isFolder) {
+  if (isFolder) return '📁';
+  if (!mimeType) return '📄';
+  if (mimeType.includes('pdf')) return '📕';
+  if (mimeType.includes('sheet') || mimeType.includes('spreadsheet')) return '📗';
+  if (mimeType.includes('document')) return '📘';
+  if (mimeType.includes('image')) return '🖼';
+  if (mimeType.includes('video')) return '🎬';
+  if (mimeType.includes('audio')) return '🎵';
+  if (mimeType.includes('zip') || mimeType.includes('rar')) return '🗜';
+  return '📄';
+}
+
+// ─── SIDEBAR (MOBILE DRAWER) ───────────────────────────────────────────────────
+function toggleSidebar(show) {
+  document.getElementById('sidebar').classList.toggle('open', show);
+  document.getElementById('sidebarBackdrop').classList.toggle('show', show);
+}
+
+// ─── CLIENTS ──────────────────────────────────────────────────────────────────
+function renderClients() {
+  const el = document.getElementById('clientList');
+  const query = (document.getElementById('clientSearch')?.value || '').toLowerCase().trim();
+  if (!clients.length) {
+    el.innerHTML = '<div style="padding:14px;font-size:12px;color:var(--gray-text);line-height:1.5;">Sin clientes aún.<br>Agrega uno con el botón +</div>';
+    return;
+  }
+  const filtered = clients.map((c,i) => ({c,i})).filter(({c}) => !query || c.name.toLowerCase().includes(query));
+  if (!filtered.length) {
+    el.innerHTML = '<div style="padding:14px;font-size:12px;color:var(--gray-text);">No se encontró ningún cliente.</div>';
+    return;
+  }
+  el.innerHTML = filtered.map(({c,i}) => `
+    <div class="client-item-wrap" id="wrap-${i}">
+      <div class="client-item ${activeIdx===i?'active':''}" onclick="selectClient(${i})" data-idx="${i}">
+        <div class="client-av">${initials(c.name)}</div>
+        <span class="client-name">${escH(c.name)}</span>
+        ${c.whatsapp ? '<span class="client-wa-tag">WA</span>' : ''}
+        <div style="margin-left:auto;display:flex;gap:4px;align-items:center;flex-shrink:0;">
+          ${c.tags&&c.tags.length?`<span style="font-size:10px;color:var(--purple);">${escH(c.tags[0])}</span>`:''}
+          ${c.fileCount!=null?`<span style="font-size:10px;color:var(--gray-text);background:var(--gray-bg);border-radius:10px;padding:1px 6px;">${c.fileCount}</span>`:''}
+        </div>
+      </div>
+      <div class="client-swipe-actions" id="swipe-${i}">
+        <button class="swipe-edit" onclick="openEditClient(null,${i})">✏️</button>
+        <button class="swipe-del" onclick="removeClient(null,${i})">❌</button>
+      </div>
+    </div>`).join('');
+  initSwipe();
+}
+
+function removeClient(e, i) {
+  if (e) e.stopPropagation();
+  if (!confirm(`¿Eliminar cliente "${clients[i].name}" de la lista? (Solo se borra de la app, no de Drive)`)) return;
+  clients.splice(i, 1);
+  saveClients();
+  if (activeIdx === i) { activeIdx = null; resetMain(); }
+  else if (activeIdx > i) activeIdx--;
+  renderClients();
+}
+
+function resetMain() {
+  document.getElementById('topActions').style.display = 'none';
+  document.getElementById('breadcrumb').innerHTML = '<span style="color:var(--gray-text);font-size:13px;">Selecciona un cliente</span>';
+  document.getElementById('fileArea').innerHTML = '<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><p>Selecciona un cliente</p><small>para ver sus archivos de Drive</small></div>';
+}
+
+function openAddClient() {
+  openModal(`
+    <h3>Agregar cliente</h3>
+    <div class="form-group"><label>Nombre *</label><input type="text" id="mName" placeholder="Empresa ABC S.A.C."></div>
+    <div class="form-group"><label>Link Drive *</label><input type="text" id="mLink" placeholder="https://drive.google.com/drive/folders/..."></div>
+    <div class="form-group"><label>WhatsApp</label><input type="text" id="mWhatsapp" placeholder="+51 987 654 321"></div>
+    <div class="form-group"><label>Teléfono</label><input type="text" id="mPhone" placeholder="+51 01 234 5678"></div>
+    <div class="form-group"><label>Dirección</label><input type="text" id="mAddress" placeholder="Av. Principal 123, Lima"></div>
+    <div class="form-group"><label>Notas</label><textarea id="mNotes" style="width:100%;min-height:60px;resize:vertical;padding:8px;border:1px solid var(--gray-border);border-radius:8px;font-size:13px;font-family:inherit;box-sizing:border-box;background:var(--white);color:var(--text);"></textarea></div>
+    <div class="form-group"><label>Etiquetas (separadas por coma)</label><input type="text" id="mTags" placeholder="premium, activo, lima"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmAddClient()">Agregar cliente</button>
+    </div>`);
+  setTimeout(() => document.getElementById('mName')?.focus(), 80);
+}
+
+function confirmAddClient() {
+  const name = document.getElementById('mName').value.trim();
+  const link = document.getElementById('mLink').value.trim();
+  const whatsapp = document.getElementById('mWhatsapp').value.trim();
+  if (!name) { showToast('Escribe un nombre', 'error'); return; }
+  if (!link) { showToast('Pega el link de Drive', 'error'); return; }
+  const m = link.match(/\/folders\/([a-zA-Z0-9_-]+)/);
+  if (!m) { showToast('Link inválido. Copia el link de una carpeta de Drive.', 'error'); return; }
+  const phone = document.getElementById('mPhone').value.trim();
+  const address = document.getElementById('mAddress').value.trim();
+  const notes = document.getElementById('mNotes').value.trim();
+  const tags = document.getElementById('mTags').value.trim().split(',').map(t=>t.trim()).filter(Boolean);
+  clients.push({ name, folderId: m[1], link, whatsapp, phone, address, notes, tags });
+  saveClients();
+  closeModal();
+  renderClients();
+  selectClient(clients.length - 1);
+  showToast(`Cliente "${name}" agregado`, 'success');
+}
+
+function openEditClient(e, i) {
+  if (e) e.stopPropagation();
+  const c = clients[i];
+  openModal(`
+    <h3>Editar cliente</h3>
+    <div class="form-group"><label>Nombre *</label><input type="text" id="eName" value="${escH(c.name)}"></div>
+    <div class="form-group"><label>Link Drive *</label><input type="text" id="eLink" value="${escH(c.link||'')}"></div>
+    <div class="form-group"><label>WhatsApp</label><input type="text" id="eWhatsapp" placeholder="+51 987 654 321" value="${escH(c.whatsapp||'')}"></div>
+    <div class="form-group"><label>Teléfono</label><input type="text" id="ePhone" placeholder="+51 01 234 5678" value="${escH(c.phone||'')}"></div>
+    <div class="form-group"><label>Dirección</label><input type="text" id="eAddress" value="${escH(c.address||'')}"></div>
+    <div class="form-group"><label>Notas</label><textarea id="eNotes" style="width:100%;min-height:60px;resize:vertical;padding:8px;border:1px solid var(--gray-border);border-radius:8px;font-size:13px;font-family:inherit;box-sizing:border-box;background:var(--white);color:var(--text);">${escH(c.notes||'')}</textarea></div>
+    <div class="form-group"><label>Etiquetas</label><input type="text" id="eTags" value="${escH((c.tags||[]).join(', '))}"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmEditClient(${i})">Guardar cambios</button>
+    </div>`);
+  setTimeout(() => document.getElementById('eName')?.focus(), 80);
+}
+
+function confirmEditClient(i) {
+  const name = document.getElementById('eName').value.trim();
+  const link = document.getElementById('eLink').value.trim();
+  const whatsapp = document.getElementById('eWhatsapp').value.trim();
+  if (!name) { showToast('Escribe un nombre', 'error'); return; }
+  if (!link) { showToast('Pega el link de Drive', 'error'); return; }
+  const m = link.match(/\/folders\/([a-zA-Z0-9_-]+)/);
+  if (!m) { showToast('Link inválido. Copia el link de una carpeta de Drive.', 'error'); return; }
+  const folderChanged = clients[i].folderId !== m[1];
+  clients[i].name = name;
+  clients[i].link = link;
+  clients[i].folderId = m[1];
+  clients[i].whatsapp = whatsapp;
+  clients[i].phone = document.getElementById('ePhone').value.trim();
+  clients[i].address = document.getElementById('eAddress').value.trim();
+  clients[i].notes = document.getElementById('eNotes').value.trim();
+  clients[i].tags = document.getElementById('eTags').value.trim().split(',').map(t=>t.trim()).filter(Boolean);
+  saveClients();
+  closeModal();
+  renderClients();
+  if (activeIdx === i) {
+    folderStack = [{ id: clients[i].folderId, name: clients[i].name }];
+    renderBreadcrumb();
+    if (folderChanged) loadFolder(clients[i].folderId);
+  }
+  showToast('Cliente actualizado', 'success');
+}
+
+// ─── FILE BROWSER ─────────────────────────────────────────────────────────────
+function selectClient(i) {
+  activeIdx = i;
+  folderStack = [{ id: clients[i].folderId, name: clients[i].name }];
+  renderClients();
+  if (window.innerWidth <= 768) toggleSidebar(false);
+  if (!accessToken) {
+    document.getElementById('fileArea').innerHTML = '<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><p>Drive no conectado</p><small><a onclick="startAuth()" style="color:var(--purple);cursor:pointer;font-weight:600;">Conectar Google Drive</a> para ver los archivos de este cliente.</small></div>';
+    document.getElementById('topActions').style.display = 'none';
+    return;
+  }
+  document.getElementById('topActions').style.display = 'flex';
+  loadFolder(clients[i].folderId);
+}
+
+async function loadFolder(folderId) {
+  selectedIds.clear();
+  renderBreadcrumb();
+  document.getElementById('fileArea').innerHTML = `<div class="empty-state"><div class="spinner"></div><p>Cargando archivos...</p></div>`;
+  setStatus('Cargando...', 'loading');
+  try {
+    currentFiles = await listFiles(folderId);
+    setStatus(`${currentFiles.length} elemento${currentFiles.length!==1?'s':''}`);
+    renderFileTable();
+    if (folderStack.length===1 && activeIdx!==null) { clients[activeIdx].fileCount=currentFiles.length; saveClients(); }
+  } catch(e) {
+    setStatus('Error', 'error');
+    document.getElementById('fileArea').innerHTML = `<div class="empty-state"><p style="color:var(--danger)">Error: ${escH(e.message)}</p><small>Verifica que tienes acceso a esta carpeta</small></div>`;
+  }
+}
+
+function renderBreadcrumb() {
+  const el = document.getElementById('breadcrumb');
+  el.innerHTML = folderStack.map((f,i) => {
+    if (i === folderStack.length-1) return `<span class="bc-cur">${escH(f.name)}</span>`;
+    return `<span class="bc-item" onclick="goToBc(${i})">${escH(f.name)}</span><span class="bc-sep"> / </span>`;
+  }).join('');
+}
+
+function goToBc(i) { folderStack = folderStack.slice(0, i+1); loadFolder(folderStack[i].id); }
+function enterFolder(id, name) { folderStack.push({id, name}); loadFolder(id); }
+function refresh() { const f = folderStack[folderStack.length-1]; if(f) loadFolder(f.id); }
+
+function renderFileTable() {
+  const el = document.getElementById('fileArea');
+  if (!currentFiles.length) {
+    el.innerHTML = '<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg><p>Carpeta vacía</p><small>Sube archivos con el botón "Subir"</small></div>';
+    updateWaButtonState();
+    return;
+  }
+  const rows = currentFiles.map(f => {
+    const isFolder = f.mimeType === 'application/vnd.google-apps.folder';
+    const iconClass = getFileIconClass(f.mimeType, isFolder);
+    const emoji = getFileEmoji(f.mimeType, isFolder);
+    const nameClick = isFolder ? `enterFolder('${escQ(f.id)}','${escQ(f.name)}')` : `previewFile('${escQ(f.id)}','${escQ(f.name)}','${escQ(f.mimeType)}')`;
+    const checked = selectedIds.has(f.id) ? 'checked' : '';
+    return `<tr>
+      <td class="chk-cell"><input type="checkbox" class="file-chk" data-id="${escH(f.id)}" ${checked} onclick="onChkChange()"></td>
+      <td>
+        <div class="file-icon">
+          <div class="fi-dot ${iconClass}">${emoji}</div>
+          <span class="name-cell fn-wrap" id="fn-${f.id}" onclick="${nameClick}">
+            <span class="fn-text">${escH(f.name)}</span>
+          </span>
+        </div>
+      </td>
+      <td class="meta-cell" style="width:110px;">${fmtDate(f.modifiedTime)}</td>
+      <td class="meta-cell" style="width:80px;">${isFolder ? '—' : fmtSize(f.size)}</td>
+      <td style="width:100px;">
+        <div class="file-row-actions">
+          ${!isFolder?`<button class="ia" onclick="previewFile('${escQ(f.id)}','${escQ(f.name)}','${escQ(f.mimeType)}')" title="Vista previa">🔍</button>`:''}
+          ${!isFolder?`<button class="ia" onclick="downloadFile('${escQ(f.id)}','${escQ(f.name)}','${escQ(f.mimeType)}')" title="Descargar">⬇</button>`:''}
+          ${(!isFolder && (f.mimeType==='application/zip'||f.mimeType==='application/x-zip-compressed'||f.name.toLowerCase().endsWith('.zip')))?`<button class="ia" onclick="unzipFile('${escQ(f.id)}','${escQ(f.name)}')" title="Descomprimir ZIP">📦</button>`:''}
+          <button class="ia" onclick="startRename('${escQ(f.id)}','${escQ(f.name)}')" title="Renombrar">✏️</button>
+          <button class="ia del" onclick="confirmDelete('${escQ(f.id)}','${escQ(f.name)}')" title="Eliminar">🗑</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+  el.innerHTML = `<table class="file-table">
+    <thead><tr><th class="chk-cell"><input type="checkbox" id="chkAll" onclick="toggleSelectAll(this)"></th><th>Nombre</th><th>Modificado</th><th>Tamaño</th><th></th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+  updateWaButtonState();
+}
+
+// ─── SELECCIÓN DE ARCHIVOS (para WhatsApp) ─────────────────────────────────────
+function toggleSelectAll(box) {
+  document.querySelectorAll('.file-chk').forEach(el => { el.checked = box.checked; });
+  onChkChange();
+}
+
+function onChkChange() {
+  selectedIds.clear();
+  document.querySelectorAll('.file-chk:checked').forEach(el => selectedIds.add(el.dataset.id));
+  updateWaButtonState();
+}
+
+function updateWaButtonState() {
+  const waBtn = document.getElementById('waBtn');
+  const dlBtn = document.getElementById('dlMultiBtn');
+  const zipBtn = document.getElementById('zipBtn');
+  const count = selectedIds.size;
+  // Solo mostrar WA si el cliente tiene WhatsApp configurado
+  if (waBtn) {
+    const hasWa = activeIdx !== null && clients[activeIdx] && clients[activeIdx].whatsapp;
+    waBtn.style.display = (count > 0 && hasWa) ? 'inline-flex' : 'none';
+    const c = waBtn.querySelector('.wa-count'); if (c) c.textContent = count;
+  }
+  if (dlBtn) {
+    dlBtn.style.display = count > 0 ? 'inline-flex' : 'none';
+    const c = dlBtn.querySelector('.dl-count'); if (c) c.textContent = count;
+  }
+  if (zipBtn) {
+    zipBtn.style.display = count > 0 ? 'inline-flex' : 'none';
+    const c = zipBtn.querySelector('.zip-count'); if (c) c.textContent = count;
+  }
+}
+
+// ─── FILE ACTIONS ─────────────────────────────────────────────────────────────
+async function previewFile(id, name, mimeType) {
+  const isImage = mimeType && (mimeType.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(name));
+  const isPDF   = mimeType && mimeType.includes('pdf');
+  setStatus('Cargando vista previa...', 'loading');
+  try {
+    const meta = await getFileMetadata(id);
+    const dlUrl   = meta.webContentLink;
+    const viewUrl = meta.webViewLink;
+    let bodyHtml = '';
+    if (isImage) {
+      // Cargar imagen via fetch con token para evitar CORS
+      try {
+        const res = await fetch(dlUrl || viewUrl, { headers: { Authorization: 'Bearer ' + accessToken } });
+        const blob = await res.blob();
+        const objUrl = URL.createObjectURL(blob);
+        bodyHtml = `<img src="${objUrl}" alt="${escH(name)}" style="max-width:100%;max-height:78vh;object-fit:contain;border-radius:8px;">`;
+      } catch(imgErr) {
+        // fallback: iframe de Drive
+        bodyHtml = `<iframe src="https://drive.google.com/file/d/${id}/preview" allowfullscreen></iframe>`;
+      }
+    } else {
+      bodyHtml = `<iframe src="https://drive.google.com/file/d/${id}/preview" allowfullscreen></iframe>`;
+    }
+    document.getElementById('previewContainer').innerHTML = `
+      <div class="preview-overlay" onclick="if(event.target===this)closePreview()">
+        <div class="preview-header">
+          <span class="preview-title">${escH(name)}</span>
+          <button class="preview-close" onclick="closePreview()">✕</button>
+        </div>
+        <div class="preview-body">${bodyHtml}</div>
+        <div class="preview-actions">
+          ${dlUrl?`<button class="preview-btn" onclick="triggerDownload('${escQ(id)}','${escQ(name)}','${escQ(mimeType||'')}')">⬇ Descargar</button>`:''}
+          ${viewUrl?`<button class="preview-btn" onclick="window.open('${viewUrl}','_blank')">↗ Abrir en Drive</button>`:''}
+        </div>
+      </div>`;
+    setStatus('');
+  } catch(e) { showToast('Error al previsualizar: ' + e.message, 'error'); setStatus('Error','error'); }
+}
+
+async function downloadFile(id, name, mimeType) {
+  setStatus('Preparando descarga...', 'loading');
+  try {
+    const meta = await getFileMetadata(id);
+    await triggerDownload(id, name, mimeType, meta);
+    setStatus('Descarga iniciada');
+  } catch(e) { showToast('Error al descargar: ' + e.message, 'error'); setStatus('Error','error'); }
+}
+
+// ─── DESCARGA COMPATIBLE SAFARI / CHROME / FIREFOX ──────────────────────────
+function isSafari() {
+  return /^((?!chrome|android).)*safari/i.test(navigator.userAgent) ||
+    (navigator.userAgent.includes('AppleWebKit') && !navigator.userAgent.includes('Chrome'));
+}
+
+// Descarga un blob usando XHR (mejor soporte en Safari que fetch para binarios)
+function xhrBlob(url, token) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('GET', url, true);
+    xhr.setRequestHeader('Authorization', 'Bearer ' + token);
+    xhr.responseType = 'blob';
+    xhr.onload = () => {
+      if (xhr.status === 200) resolve(xhr.response);
+      else reject(new Error('HTTP ' + xhr.status));
+    };
+    xhr.onerror = () => reject(new Error('Error de red'));
+    xhr.send();
+  });
+}
+
+// Guarda un blob en disco — Safari requiere que el objeto URL se abra en una
+// nueva pestaña cuando no soporta el atributo download en blobs cross-origin
+function saveBlobToFile(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  if (isSafari()) {
+    // Safari: abrir en nueva pestaña (el usuario guarda con Cmd+S o desde el visor)
+    const win = window.open(url, '_blank');
+    if (!win) {
+      // Fallback si popups bloqueados: link visible
+      showToast('Habilita popups para descargar en Safari, o usa el botón derecho → Guardar', 'error');
+    }
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
+  } else {
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { a.remove(); URL.revokeObjectURL(url); }, 1500);
+  }
+}
+
+async function triggerDownload(id, name, mimeType, meta) {
+  const isGDoc = mimeType && mimeType.startsWith('application/vnd.google-apps') && !mimeType.includes('folder');
+  let blob, filename = name;
+  if (isGDoc) {
+    const exportUrl = `${DRIVE_API}/files/${id}/export?mimeType=application/pdf`;
+    blob = await xhrBlob(exportUrl, accessToken);
+    filename = name + '.pdf';
+  } else {
+    // Intentar con acknowledgeAbuse primero, luego sin él
+    try {
+      blob = await xhrBlob(`${DRIVE_API}/files/${id}?alt=media&acknowledgeAbuse=true`, accessToken);
+    } catch(e) {
+      blob = await xhrBlob(`${DRIVE_API}/files/${id}?alt=media`, accessToken);
+    }
+    if (!blob || blob.size === 0) throw new Error('Archivo vacío');
+  }
+  saveBlobToFile(blob, filename);
+}
+
+// ─── DESCARGA MÚLTIPLE ────────────────────────────────────────────────────────
+async function downloadSelected() {
+  if (!selectedIds.size) return;
+  const items = currentFiles.filter(f => selectedIds.has(f.id) && f.mimeType !== 'application/vnd.google-apps.folder');
+  if (!items.length) { showToast('No hay archivos descargables seleccionados', 'error'); return; }
+  showToast(`Descargando ${items.length} archivo(s)...`, '');
+  setStatus('Descargando...', 'loading');
+  for (const f of items) {
+    try { await downloadFile(f.id, f.name, f.mimeType); await new Promise(r => setTimeout(r, 400)); }
+    catch(e) { showToast(`Error con "${f.name}": ${e.message}`, 'error'); }
+  }
+  setStatus('Descarga completada');
+}
+
+// ─── ZIP DE SELECCIONADOS ─────────────────────────────────────────────────────
+// ZIP global para reutilizar después de generar
+let _lastZipBlob = null;
+let _lastZipName = '';
+
+function zipSelected() {
+  if (!selectedIds.size) return;
+  const items = currentFiles.filter(f => selectedIds.has(f.id) && f.mimeType !== 'application/vnd.google-apps.folder');
+  if (!items.length) { showToast('No hay archivos comprimibles seleccionados', 'error'); return; }
+  const clientName = activeIdx !== null ? clients[activeIdx].name : 'archivos';
+  const hasWa = activeIdx !== null && clients[activeIdx] && clients[activeIdx].whatsapp;
+  const fileList = items.map(f => `<li style="font-size:12px;color:var(--gray-text);padding:2px 0;">${escH(f.name)}</li>`).join('');
+  openModal(`
+    <h3>Crear ZIP</h3>
+    <p class="modal-sub">${items.length} archivo(s) seleccionado(s):</p>
+    <ul style="list-style:none;max-height:120px;overflow-y:auto;border:1px solid var(--gray-border);border-radius:6px;padding:8px 10px;margin-bottom:14px;">${fileList}</ul>
+    <div class="form-group">
+      <label>Nombre del ZIP</label>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <input type="text" id="zipName" value="${escH(clientName)}" style="flex:1;">
+        <span style="font-size:13px;color:var(--gray-text);white-space:nowrap;">.zip</span>
+      </div>
+    </div>
+    <div id="zipProgress" style="display:none;">
+      <div class="progress-bar" style="display:block;margin-bottom:6px;"><div class="progress-fill" id="zipProgressFill" style="width:0%"></div></div>
+      <p style="font-size:12px;color:var(--gray-text);text-align:center;" id="zipProgressLabel">Preparando...</p>
+    </div>
+    <div class="modal-actions" id="zipActions">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" id="zipBuildBtn" onclick="buildZip()">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Generar ZIP
+      </button>
+    </div>
+    <div class="modal-actions" id="zipDoneActions" style="display:none;flex-direction:column;gap:8px;">
+      <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;">
+        <button class="btn" onclick="closeModal()">Cerrar</button>
+        <button class="btn btn-primary" onclick="downloadLastZip()">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"/><polyline points="7 11 12 16 17 11"/><path d="M5 19h14"/></svg>
+          Descargar ZIP
+        </button>
+        ${hasWa ? `<button class="btn btn-wa" onclick="sendZipWhatsapp()">
+          <svg class="icon" viewBox="0 0 24 24" fill="currentColor" width="13" height="13"><path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38a9.9 9.9 0 0 0 4.79 1.22h.01c5.46 0 9.9-4.45 9.9-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2z"/></svg>
+          Enviar por WhatsApp
+        </button>` : ''}
+      </div>
+      ${!hasWa ? `<p style="font-size:11px;color:var(--gray-text);text-align:right;">Para enviar por WhatsApp, <a onclick="closeModal();openEditClient(null,${activeIdx})" style="color:var(--purple);cursor:pointer;">configura el número del cliente</a>.</p>` : ''}
+    </div>`);
+}
+
+async function buildZip() {
+  const zipName = (document.getElementById('zipName')?.value.trim() || 'archivos');
+  _lastZipName = zipName + '.zip';
+  const items = currentFiles.filter(f => selectedIds.has(f.id) && f.mimeType !== 'application/vnd.google-apps.folder');
+  const buildBtn = document.getElementById('zipBuildBtn');
+  const actionsEl = document.getElementById('zipActions');
+  const doneEl = document.getElementById('zipDoneActions');
+  const progressEl = document.getElementById('zipProgress');
+  const fillEl = document.getElementById('zipProgressFill');
+  const labelEl = document.getElementById('zipProgressLabel');
+  if (buildBtn) buildBtn.disabled = true;
+  if (progressEl) progressEl.style.display = 'block';
+  // Cargar JSZip dinámicamente
+  if (!window.JSZip) {
+    if (labelEl) labelEl.textContent = 'Cargando compresor...';
+    await new Promise((res, rej) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+      s.onload = res; s.onerror = rej;
+      document.head.appendChild(s);
+    });
+  }
+  setStatus('Comprimiendo...', 'loading');
+  const zip = new JSZip();
+  for (let i = 0; i < items.length; i++) {
+    const f = items[i];
+    if (labelEl) labelEl.textContent = `(${i+1}/${items.length}) ${f.name}`;
+    if (fillEl) fillEl.style.width = Math.round((i / items.length) * 85) + '%';
+    try {
+      const isGDoc = f.mimeType && f.mimeType.startsWith('application/vnd.google-apps') && !f.mimeType.includes('folder');
+      let blob;
+      if (isGDoc) {
+        // Documentos Google → exportar como PDF via API (con token)
+        const exportUrl = `${DRIVE_API}/files/${f.id}/export?mimeType=application/pdf`;
+        blob = await xhrBlob(exportUrl, accessToken);
+        zip.file(f.name + '.pdf', blob);
+      } else {
+        try {
+          blob = await xhrBlob(`${DRIVE_API}/files/${f.id}?alt=media&acknowledgeAbuse=true`, accessToken);
+        } catch(e) {
+          blob = await xhrBlob(`${DRIVE_API}/files/${f.id}?alt=media`, accessToken);
+        }
+        if (!blob || blob.size === 0) throw new Error('Archivo vacío');
+        zip.file(f.name, blob);
+      }
+    } catch(e) {
+      console.error('ZIP skip:', f.name, e);
+      showToast(`Saltando "${f.name}": ${e.message}`, 'error');
+    }
+  }
+  if (labelEl) labelEl.textContent = 'Generando archivo ZIP...';
+  if (fillEl) fillEl.style.width = '95%';
+  _lastZipBlob = await zip.generateAsync({ type: 'blob' }, (zipMeta) => {
+    if (fillEl) fillEl.style.width = (95 + zipMeta.percent * 0.05) + '%';
+  });
+  if (fillEl) fillEl.style.width = '100%';
+  if (labelEl) labelEl.textContent = '✓ ZIP listo';
+  if (actionsEl) actionsEl.style.display = 'none';
+  if (doneEl) doneEl.style.display = 'flex';
+  setStatus('ZIP listo');
+}
+
+function downloadLastZip() {
+  if (!_lastZipBlob) return;
+  saveBlobToFile(_lastZipBlob, _lastZipName);
+  showToast('ZIP descargado: ' + _lastZipName, 'success');
+  closeModal();
+}
+
+function sendZipWhatsapp() {
+  if (!_lastZipBlob || activeIdx === null) return;
+  const client = clients[activeIdx];
+  const phone = normalizePhone(client.whatsapp);
+  if (!phone) { showToast('Número de WhatsApp inválido', 'error'); return; }
+  // Descarga el zip Y abre WhatsApp con instrucción de adjuntarlo
+  downloadLastZip();
+  setTimeout(() => {
+    const msg = `Hola! Te envío el archivo comprimido "${_lastZipName}" con los documentos solicitados. Por favor adjúntalo desde tus descargas.`;
+    const encoded = encodeURIComponent(msg);
+    const iframe = document.createElement('iframe'); iframe.style.display = 'none';
+    document.body.appendChild(iframe);
+    iframe.src = `whatsapp://send?phone=${phone}&text=${encoded}`;
+    const fallback = setTimeout(() => window.open(`https://wa.me/${phone}?text=${encoded}`, '_blank'), 1500);
+    window.addEventListener('blur', function onB(){ clearTimeout(fallback); window.removeEventListener('blur',onB); }, { once:true });
+    setTimeout(() => { try { document.body.removeChild(iframe); } catch(e){} }, 3000);
+  }, 800);
+}
+
+async function openFile(id, name, mimeType) { return previewFile(id, name, mimeType); }
+
+function closePreview() { document.getElementById('previewContainer').innerHTML = ''; }
+
+function startRename(id, currentName) {
+  const wrap = document.getElementById('fn-' + id);
+  if (!wrap) return;
+  wrap.innerHTML = `<input class="rename-input" value="${escH(currentName)}" 
+    onblur="commitRename('${escQ(id)}',this.value,'${escQ(currentName)}')" 
+    onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){this.value='${escQ(currentName)}';this.blur();}" autofocus>`;
+  wrap.querySelector('input').select();
+}
+
+async function commitRename(id, newName, oldName) {
+  newName = newName.trim();
+  if (!newName || newName === oldName) { renderFileTable(); return; }
+  setStatus('Renombrando...', 'loading');
+  try {
+    await renameFileDrive(id, newName);
+    const f = currentFiles.find(x => x.id === id);
+    if (f) f.name = newName;
+    showToast(`Renombrado a "${newName}"`, 'success');
+    setStatus('Renombrado');
+    renderFileTable();
+  } catch(e) { showToast('Error al renombrar: ' + e.message, 'error'); setStatus('Error', 'error'); renderFileTable(); }
+}
+
+function confirmDelete(id, name) {
+  openModal(`
+    <h3>Eliminar archivo</h3>
+    <p class="modal-sub">"<strong>${escH(name)}</strong>" se moverá a la papelera de Google Drive.</p>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-danger" onclick="doDelete('${escQ(id)}','${escQ(name)}')">Eliminar</button>
+    </div>`);
+}
+
+async function doDelete(id, name) {
+  closeModal();
+  setStatus('Eliminando...', 'loading');
+  try {
+    await deleteFileDrive(id);
+    currentFiles = currentFiles.filter(x => x.id !== id);
+    selectedIds.delete(id);
+    showToast(`"${name}" eliminado`, 'success');
+    setStatus(`Eliminado`);
+    renderFileTable();
+  } catch(e) { showToast('Error: ' + e.message, 'error'); setStatus('Error', 'error'); }
+}
+
+// ─── UPLOAD (multi-archivo + carpetas + drag-over-window) ─────────────────────
+let pendingFiles = [];  // array de File
+
+function openUpload() {
+  if (!clients.length) { showToast('Agrega un cliente primero', 'error'); return; }
+  const clientOpts = clients.map((c,i) => `<option value="${i}" ${i===activeIdx?'selected':''}>${escH(c.name)}</option>`).join('');
+  const ci = activeIdx !== null ? activeIdx : 0;
+  if (activeIdx !== null && folderStack.length) {
+    const cur = folderStack[folderStack.length-1];
+    uploadDestFolder = { id: cur.id, name: cur.name, path: folderStack.map(f=>f.name).join(' / ') };
+  } else {
+    uploadDestFolder = { id: clients[ci].folderId, name: clients[ci].name, path: clients[ci].name };
+  }
+  pendingFiles = [];
+  openModal(`
+    <h3>Subir archivos</h3>
+    <div class="form-group">
+      <label>Cliente destino</label>
+      <select id="uClient" onchange="onUploadClientChange()">${clientOpts}</select>
+    </div>
+    <div class="form-group">
+      <label>Carpeta destino en Drive</label>
+      <div class="dest-row">
+        <div class="dest-path" id="uDestPath">${escH(uploadDestFolder.path||'')}</div>
+        <button type="button" class="btn" onclick="openFolderPicker()">Cambiar</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Archivos / Carpetas</label>
+      <div class="drop-zone" id="dropZone"
+           onclick="document.getElementById('uFile').click()"
+           ondragover="event.preventDefault();this.classList.add('drag')"
+           ondragleave="this.classList.remove('drag')"
+           ondrop="handleDropModal(event)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+        <p>Arrastra archivos o carpetas aquí, o haz clic</p>
+        <small>Múltiples archivos permitidos — ZIPs, imágenes, documentos…</small>
+        <input type="file" id="uFile" style="display:none" multiple onchange="onFilesChosen(this.files)">
+      </div>
+      <div style="display:flex;gap:6px;margin-top:6px;">
+        <button type="button" class="btn" style="flex:1;" onclick="document.getElementById('uFile').click()">📄 Seleccionar archivos</button>
+        <button type="button" class="btn" style="flex:1;" onclick="document.getElementById('uFolder').click()">📁 Seleccionar carpeta
+          <input type="file" id="uFolder" style="display:none" multiple webkitdirectory onchange="onFolderChosen(this.files)">
+        </button>
+      </div>
+      <div id="uploadQueue" class="upload-queue" style="display:none;"></div>
+      <div id="uploadSummary" class="upload-summary"></div>
+      <div class="progress-bar" id="progressBar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+      <div id="progressLabel" style="font-size:11px;color:var(--gray-text);margin-top:4px;text-align:center;display:none;"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" id="uploadBtn" onclick="doUploadAll()">Subir</button>
+    </div>`);
+}
+
+function onUploadClientChange() {
+  const ci = parseInt(document.getElementById('uClient').value);
+  uploadDestFolder = { id: clients[ci].folderId, name: clients[ci].name, path: clients[ci].name };
+  document.getElementById('uDestPath').textContent = uploadDestFolder.path;
+}
+
+function handleDropModal(e) {
+  e.preventDefault();
+  document.getElementById('dropZone').classList.remove('drag');
+  const items = e.dataTransfer.items;
+  if (items) {
+    const files = [];
+    for (const item of items) {
+      if (item.kind === 'file') {
+        const entry = item.webkitGetAsEntry ? item.webkitGetAsEntry() : null;
+        if (entry && entry.isDirectory) {
+          collectFolderFiles(entry, files).then(() => {
+            addFilesToQueue(files);
+          });
+          return;
+        } else {
+          const f = item.getAsFile();
+          if (f) files.push(f);
+        }
+      }
+    }
+    addFilesToQueue(files);
+  } else {
+    addFilesToQueue(Array.from(e.dataTransfer.files));
+  }
+}
+
+async function collectFolderFiles(entry, out, pathPrefix='') {
+  return new Promise(resolve => {
+    if (entry.isFile) {
+      entry.file(f => {
+        // Attach a virtual path for subfolder creation
+        Object.defineProperty(f, '_relativePath', { value: pathPrefix + f.name, writable: true });
+        out.push(f);
+        resolve();
+      });
+    } else if (entry.isDirectory) {
+      const reader = entry.createReader();
+      const readAll = (cb) => {
+        reader.readEntries(entries => {
+          if (!entries.length) return cb();
+          Promise.all(entries.map(e => collectFolderFiles(e, out, pathPrefix + entry.name + '/'))).then(() => readAll(cb));
+        });
+      };
+      readAll(resolve);
+    } else resolve();
+  });
+}
+
+function onFilesChosen(fileList) {
+  addFilesToQueue(Array.from(fileList));
+}
+
+function onFolderChosen(fileList) {
+  // Files from webkitdirectory already have webkitRelativePath
+  const files = Array.from(fileList).map(f => {
+    Object.defineProperty(f, '_relativePath', { value: f.webkitRelativePath || f.name, writable: true });
+    return f;
+  });
+  addFilesToQueue(files);
+}
+
+function addFilesToQueue(files) {
+  if (!files.length) return;
+  pendingFiles = pendingFiles.concat(files);
+  renderUploadQueue();
+}
+
+function removeFromQueue(idx) {
+  pendingFiles.splice(idx, 1);
+  renderUploadQueue();
+}
+
+function renderUploadQueue() {
+  const qEl = document.getElementById('uploadQueue');
+  const sumEl = document.getElementById('uploadSummary');
+  if (!qEl) return;
+  if (!pendingFiles.length) {
+    qEl.style.display = 'none';
+    if (sumEl) sumEl.textContent = '';
+    return;
+  }
+  qEl.style.display = 'block';
+  qEl.innerHTML = pendingFiles.map((f, i) => `
+    <div class="upload-queue-item" id="uqi-${i}">
+      <span class="uqi-status" id="uqi-st-${i}">⏳</span>
+      <span class="uqi-name">${escH(f._relativePath || f.name)}</span>
+      <span class="uqi-size">${fmtSize(f.size)}</span>
+      <button class="uqi-remove" onclick="removeFromQueue(${i})" title="Quitar">✕</button>
+    </div>`).join('');
+  const total = pendingFiles.reduce((acc, f) => acc + (f.size||0), 0);
+  if (sumEl) sumEl.textContent = `${pendingFiles.length} archivo(s) — ${fmtSize(total)} en total`;
+}
+
+async function doUploadAll() {
+  if (!pendingFiles.length) { showToast('Selecciona al menos un archivo', 'error'); return; }
+  if (!(await requireDrive())) return;
+  const ci = parseInt(document.getElementById('uClient').value);
+  const rootParentId = (uploadDestFolder && uploadDestFolder.id) || clients[ci].folderId;
+
+  const btn = document.getElementById('uploadBtn');
+  btn.disabled = true; btn.textContent = 'Subiendo...';
+  document.getElementById('progressBar').style.display = 'block';
+  const labelEl = document.getElementById('progressLabel');
+  if (labelEl) labelEl.style.display = 'block';
+
+  // Build a cache of folder ids: path → driveId
+  const folderCache = { '': rootParentId };
+
+  async function ensureDriveFolder(pathParts) {
+    // pathParts = ['FolderA', 'SubB'] → creates FolderA/SubB under rootParentId
+    let current = '';
+    for (const part of pathParts) {
+      const prev = current;
+      current = current ? current + '/' + part : part;
+      if (!folderCache[current]) {
+        const parentId = folderCache[prev];
+        // Check if it already exists
+        const q = encodeURIComponent(`'${parentId}' in parents and name='${part}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
+        const data = await driveRequest(`/files?q=${q}&fields=files(id,name)&pageSize=5`);
+        if (data.files && data.files.length) {
+          folderCache[current] = data.files[0].id;
+        } else {
+          const created = await driveRequest('/files', {
+            method: 'POST',
+            body: JSON.stringify({ name: part, mimeType: 'application/vnd.google-apps.folder', parents: [parentId] })
+          });
+          folderCache[current] = created.id;
+        }
+      }
+    }
+    return folderCache[current];
+  }
+
+  let done = 0;
+  const total = pendingFiles.length;
+  for (let i = 0; i < total; i++) {
+    const f = pendingFiles[i];
+    const stEl = document.getElementById('uqi-st-' + i);
+    if (stEl) stEl.textContent = '⬆';
+    if (labelEl) labelEl.textContent = `(${i+1}/${total}) ${f._relativePath || f.name}`;
+    try {
+      // Determine parent folder
+      const relPath = f._relativePath || f.webkitRelativePath || f.name;
+      const parts = relPath.split('/');
+      let parentId = rootParentId;
+      if (parts.length > 1) {
+        parentId = await ensureDriveFolder(parts.slice(0, -1));
+      }
+      const fileName = parts[parts.length - 1];
+      await uploadFile(f, fileName, parentId, (pct) => {
+        const overall = ((i + pct) / total);
+        document.getElementById('progressFill').style.width = Math.round(overall * 100) + '%';
+      });
+      if (stEl) stEl.textContent = '✅';
+      done++;
+    } catch(e) {
+      if (stEl) stEl.textContent = '❌';
+      showToast(`Error con "${f.name}": ${e.message}`, 'error');
+    }
+  }
+  if (labelEl) labelEl.textContent = `✓ ${done}/${total} subido(s)`;
+  document.getElementById('progressFill').style.width = '100%';
+  if (done > 0) {
+    showToast(`${done} archivo(s) subido(s) correctamente`, 'success');
+    const curFolder = folderStack[folderStack.length-1];
+    if (ci === activeIdx && curFolder && curFolder.id === rootParentId) refresh();
+  }
+  btn.disabled = false; btn.textContent = 'Subir más';
+  pendingFiles = [];
+  renderUploadQueue();
+}
+
+// ─── WINDOW DRAG-AND-DROP (arrastrar sobre cualquier parte de la ventana del cliente) ──
+function initWindowDrop() {
+  let dragCounter = 0;
+  const overlay = document.getElementById('windowDropOverlay');
+
+  document.addEventListener('dragenter', (e) => {
+    if (activeIdx === null || !accessToken) return;
+    dragCounter++;
+    if (dragCounter === 1) overlay.classList.add('active');
+  });
+  document.addEventListener('dragleave', (e) => {
+    dragCounter--;
+    if (dragCounter <= 0) { dragCounter = 0; overlay.classList.remove('active'); }
+  });
+  document.addEventListener('dragover', (e) => { e.preventDefault(); });
+  document.addEventListener('drop', async (e) => {
+    e.preventDefault();
+    overlay.classList.remove('active');
+    dragCounter = 0;
+    if (activeIdx === null) { showToast('Selecciona un cliente primero', 'error'); return; }
+    if (!(await requireDrive())) return;
+    // Collect files from dataTransfer
+    const items = e.dataTransfer.items;
+    const files = [];
+    if (items) {
+      const promises = [];
+      for (const item of items) {
+        if (item.kind === 'file') {
+          const entry = item.webkitGetAsEntry ? item.webkitGetAsEntry() : null;
+          if (entry && entry.isDirectory) {
+            promises.push(collectFolderFiles(entry, files));
+          } else {
+            const f = item.getAsFile();
+            if (f) files.push(f);
+          }
+        }
+      }
+      await Promise.all(promises);
+    } else {
+      files.push(...Array.from(e.dataTransfer.files));
+    }
+    if (!files.length) return;
+    // Upload directly to current folder
+    const cur = folderStack[folderStack.length-1];
+    const parentId = cur ? cur.id : clients[activeIdx].folderId;
+    showToast(`Subiendo ${files.length} archivo(s)...`, '');
+    setStatus(`Subiendo ${files.length} archivo(s)...`, 'loading');
+    let done = 0;
+    for (const f of files) {
+      try {
+        const relPath = f._relativePath || f.webkitRelativePath || f.name;
+        const parts = relPath.split('/');
+        let destParentId = parentId;
+        if (parts.length > 1) {
+          // Create subfolders as needed
+          const folderCache = { '': parentId };
+          async function ensureWinFolder(pathParts) {
+            let current = '';
+            for (const part of pathParts) {
+              const prev = current;
+              current = current ? current + '/' + part : part;
+              if (!folderCache[current]) {
+                const pid = folderCache[prev];
+                const q = encodeURIComponent(`'${pid}' in parents and name='${part}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
+                const data = await driveRequest(`/files?q=${q}&fields=files(id,name)&pageSize=5`);
+                if (data.files && data.files.length) folderCache[current] = data.files[0].id;
+                else {
+                  const cr = await driveRequest('/files', { method:'POST', body: JSON.stringify({ name: part, mimeType:'application/vnd.google-apps.folder', parents:[pid] }) });
+                  folderCache[current] = cr.id;
+                }
+              }
+            }
+            return folderCache[current];
+          }
+          destParentId = await ensureWinFolder(parts.slice(0, -1));
+        }
+        const fileName = parts[parts.length - 1];
+        await uploadFile(f, fileName, destParentId, ()=>{});
+        done++;
+      } catch(err) {
+        showToast(`Error con "${f.name}": ${err.message}`, 'error');
+      }
+    }
+    showToast(`${done}/${files.length} archivo(s) subido(s)`, 'success');
+    setStatus('Listo');
+    refresh();
+  });
+}
+
+// ─── CREAR CARPETA ─────────────────────────────────────────────────────────────
+async function openCreateFolder() {
+  if (!(await requireDrive())) return;
+  openModal(`
+    <h3>Nueva carpeta</h3>
+    <div class="form-group">
+      <label>Nombre de la carpeta</label>
+      <input type="text" id="folderName" placeholder="Ej: Contratos 2024" autofocus>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="doCreateFolder()">Crear</button>
+    </div>`);
+  setTimeout(() => document.getElementById('folderName')?.focus(), 80);
+}
+
+async function doCreateFolder() {
+  const name = document.getElementById('folderName').value.trim();
+  if (!name) { showToast('Escribe un nombre', 'error'); return; }
+  const cur = folderStack[folderStack.length-1];
+  const parentId = cur ? cur.id : (activeIdx !== null ? clients[activeIdx].folderId : null);
+  if (!parentId) return;
+  setStatus('Creando carpeta...', 'loading');
+  try {
+    await driveRequest('/files', {
+      method: 'POST',
+      body: JSON.stringify({ name, mimeType: 'application/vnd.google-apps.folder', parents: [parentId] })
+    });
+    showToast(`Carpeta "${name}" creada`, 'success');
+    closeModal();
+    refresh();
+  } catch(e) {
+    showToast('Error: ' + e.message, 'error');
+    setStatus('Error', 'error');
+  }
+}
+
+// ─── DESCOMPRIMIR ZIP ─────────────────────────────────────────────────────────
+async function unzipFile(fileId, fileName) {
+  if (!(await requireDrive())) return;
+  const cur = folderStack[folderStack.length-1];
+  const parentId = cur ? cur.id : clients[activeIdx].folderId;
+  const zipBaseName = fileName.replace(/\.zip$/i, '');
+
+  openModal(`
+    <h3>Descomprimir ZIP</h3>
+    <p class="modal-sub">Se descargará <strong>${escH(fileName)}</strong> y se extraerán los archivos a una carpeta nueva en Drive.</p>
+    <div class="form-group">
+      <label>Nombre de la carpeta destino</label>
+      <input type="text" id="unzipFolderName" value="${escH(zipBaseName)}">
+    </div>
+    <div id="unzipProgress" style="display:none;">
+      <div class="progress-bar" style="display:block;margin-bottom:6px;"><div class="progress-fill" id="unzipFill" style="width:0%"></div></div>
+      <p style="font-size:12px;color:var(--gray-text);text-align:center;" id="unzipLabel">Preparando...</p>
+    </div>
+    <div class="modal-actions" id="unzipActions">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="doUnzip('${escQ(fileId)}','${escQ(fileName)}','${escQ(parentId)}')">Descomprimir</button>
+    </div>`);
+  setTimeout(() => document.getElementById('unzipFolderName')?.focus(), 80);
+}
+
+async function doUnzip(fileId, fileName, parentId) {
+  // Load JSZip if needed
+  const folderName = document.getElementById('unzipFolderName').value.trim() || fileName.replace(/\.zip$/i,'');
+  document.getElementById('unzipActions').style.display = 'none';
+  document.getElementById('unzipProgress').style.display = 'block';
+  const fillEl = document.getElementById('unzipFill');
+  const labelEl = document.getElementById('unzipLabel');
+
+  try {
+    if (!window.JSZip) {
+      if (labelEl) labelEl.textContent = 'Cargando compresor...';
+      await new Promise((res, rej) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+        s.onload = res; s.onerror = rej;
+        document.head.appendChild(s);
+      });
+    }
+    if (labelEl) labelEl.textContent = 'Descargando ZIP...';
+    if (fillEl) fillEl.style.width = '10%';
+    // Download the zip
+    const blob = await xhrBlob(`${DRIVE_API}/files/${fileId}?alt=media&acknowledgeAbuse=true`, accessToken);
+    if (fillEl) fillEl.style.width = '25%';
+    if (labelEl) labelEl.textContent = 'Leyendo ZIP...';
+    const zip = await JSZip.loadAsync(blob);
+    const entries = Object.values(zip.files).filter(e => !e.dir);
+    if (!entries.length) { showToast('El ZIP está vacío o solo contiene carpetas', 'error'); closeModal(); return; }
+
+    // Create root folder
+    if (labelEl) labelEl.textContent = `Creando carpeta "${folderName}"...`;
+    if (fillEl) fillEl.style.width = '30%';
+    const rootFolder = await driveRequest('/files', {
+      method: 'POST',
+      body: JSON.stringify({ name: folderName, mimeType: 'application/vnd.google-apps.folder', parents: [parentId] })
+    });
+    const rootId = rootFolder.id;
+
+    // Cache sub-folder ids
+    const subFolderCache = { '': rootId };
+    async function ensureUnzipFolder(parts) {
+      let current = '';
+      for (const part of parts) {
+        const prev = current;
+        current = current ? current + '/' + part : part;
+        if (!subFolderCache[current]) {
+          const pid = subFolderCache[prev];
+          const created = await driveRequest('/files', {
+            method: 'POST',
+            body: JSON.stringify({ name: part, mimeType: 'application/vnd.google-apps.folder', parents: [pid] })
+          });
+          subFolderCache[current] = created.id;
+        }
+      }
+      return subFolderCache[current];
+    }
+
+    // Upload each file
+    for (let i = 0; i < entries.length; i++) {
+      const entry = entries[i];
+      const pct = 30 + Math.round((i / entries.length) * 68);
+      if (fillEl) fillEl.style.width = pct + '%';
+      if (labelEl) labelEl.textContent = `(${i+1}/${entries.length}) ${entry.name}`;
+      try {
+        const parts = entry.name.split('/');
+        const fileName2 = parts.pop();
+        let destParent = rootId;
+        if (parts.length) destParent = await ensureUnzipFolder(parts);
+        const fileBlob = await entry.async('blob');
+        const file = new File([fileBlob], fileName2, { type: fileBlob.type || 'application/octet-stream' });
+        await uploadFile(file, fileName2, destParent, ()=>{});
+      } catch(e) {
+        console.warn('Unzip skip', entry.name, e);
+      }
+    }
+    if (fillEl) fillEl.style.width = '100%';
+    if (labelEl) labelEl.textContent = `✓ ${entries.length} archivo(s) extraído(s)`;
+    showToast(`ZIP descomprimido: ${entries.length} archivo(s) en "${folderName}"`, 'success');
+    setTimeout(() => { closeModal(); refresh(); }, 1200);
+  } catch(e) {
+    showToast('Error al descomprimir: ' + e.message, 'error');
+    document.getElementById('unzipActions').style.display = 'flex';
+    document.getElementById('unzipProgress').style.display = 'none';
+  }
+}
+
+// ─── SELECTOR DE CARPETA DESTINO (PICKER) ──────────────────────────────────────
+function openFolderPicker() {
+  const ci = parseInt(document.getElementById('uClient').value);
+  pickerStack = [{ id: clients[ci].folderId, name: clients[ci].name }];
+  renderFolderPicker();
+}
+
+async function renderFolderPicker() {
+  const cur = pickerStack[pickerStack.length-1];
+  openModal2(`
+    <h3>Elegir carpeta destino</h3>
+    <p class="modal-sub">${pickerStack.map(f=>escH(f.name)).join(' / ')}</p>
+    <div class="picker-list" id="pickerList">
+      <div style="padding:24px;text-align:center;"><div class="spinner"></div></div>
+    </div>
+    <div class="modal-actions" style="justify-content:space-between;">
+      <button class="btn" ${pickerStack.length<=1?'disabled':''} onclick="pickerGoUp()">⬅ Subir nivel</button>
+      <div style="display:flex;gap:8px;">
+        <button class="btn" onclick="closeModal2()">Cancelar</button>
+        <button class="btn btn-primary" onclick="confirmFolderPicker()">Usar esta carpeta</button>
+      </div>
+    </div>`);
+  try {
+    const files = await listFiles(cur.id);
+    const folders = files.filter(f => f.mimeType === 'application/vnd.google-apps.folder');
+    const list = document.getElementById('pickerList');
+    if (!list) return;
+    if (!folders.length) { list.innerHTML = '<div class="picker-empty">Sin subcarpetas aquí. Puedes usar esta carpeta directamente.</div>'; return; }
+    list.innerHTML = folders.map(f => `<div class="client-item" style="border-left:none;" onclick="pickerEnter('${escQ(f.id)}','${escQ(f.name)}')">
+      <div class="fi-dot fi-folder" style="width:24px;height:24px;font-size:12px;">📁</div>
+      <span class="client-name">${escH(f.name)}</span>
+    </div>`).join('');
+  } catch(e) {
+    const list = document.getElementById('pickerList');
+    if (list) list.innerHTML = `<div class="picker-empty" style="color:var(--danger);">Error: ${escH(e.message)}</div>`;
+  }
+}
+
+function pickerEnter(id, name) { pickerStack.push({id,name}); renderFolderPicker(); }
+function pickerGoUp() { if (pickerStack.length>1) { pickerStack.pop(); renderFolderPicker(); } }
+
+function confirmFolderPicker() {
+  const cur = pickerStack[pickerStack.length-1];
+  uploadDestFolder = { id: cur.id, name: cur.name, path: pickerStack.map(f=>f.name).join(' / ') };
+  const pathEl = document.getElementById('uDestPath');
+  if (pathEl) pathEl.textContent = uploadDestFolder.path;
+  closeModal2();
+}
+
+// ─── ENVÍO POR WHATSAPP ─────────────────────────────────────────────────────────
+function openWhatsappSend() {
+  const client = clients[activeIdx];
+  if (!client) return;
+  if (!selectedIds.size) { showToast('Selecciona al menos un archivo', 'error'); return; }
+  const items = currentFiles.filter(f => selectedIds.has(f.id));
+  const hasPhone = !!client.whatsapp;
+  const lines = [`Hola! Te comparto ${items.length>1?'estos archivos':'este archivo'}:`,
+    ...items.map(it => `• ${it.name}: ${it.webViewLink||''}`)];
+  openModal(`
+    <h3>Enviar por WhatsApp</h3>
+    <p class="modal-sub">${hasPhone
+      ? `Se enviará a <strong>${escH(client.whatsapp)}</strong> (${escH(client.name)})`
+      : `Este cliente no tiene un WhatsApp configurado. <a href="#" onclick="closeModal();openEditClient(null,${activeIdx});return false;">Configúralo aquí</a>`}</p>
+    <div class="form-group">
+      <label>Mensaje</label>
+      <textarea id="waMsg" rows="6">${escH(lines.join('\n'))}</textarea>
+    </div>
+    <div class="form-group checkbox-row">
+      <input type="checkbox" id="waShare" checked>
+      <label for="waShare">Permitir acceso por enlace a estos archivos antes de enviar (recomendado, para que el cliente pueda abrirlos)</label>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" id="waSendBtn" ${!hasPhone?'disabled':''} onclick="confirmSendWhatsapp(${activeIdx})">Abrir WhatsApp</button>
+    </div>`);
+}
+
+async function confirmSendWhatsapp(ci) {
+  const client = clients[ci];
+  const phone = normalizePhone(client.whatsapp);
+  if (!phone) { showToast('Número de WhatsApp inválido', 'error'); return; }
+  const msg = document.getElementById('waMsg').value;
+  const share = document.getElementById('waShare').checked;
+  const btn = document.getElementById('waSendBtn');
+  btn.disabled = true; btn.textContent = 'Preparando...';
+  try {
+    if (share) {
+      const items = currentFiles.filter(f => selectedIds.has(f.id));
+      for (const it of items) { await ensurePublicLink(it.id); }
+    }
+    const encoded = encodeURIComponent(msg);
+    // Intenta abrir la app nativa de WhatsApp Desktop primero.
+    // Si no está instalada, el iframe falla silenciosamente y el
+    // setTimeout abre wa.me como fallback en una nueva pestaña.
+    const appUrl = `whatsapp://send?phone=${phone}&text=${encoded}`;
+    const webUrl = `https://wa.me/${phone}?text=${encoded}`;
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    document.body.appendChild(iframe);
+    iframe.src = appUrl;
+    // Fallback: si después de 1.5s la página sigue activa (no se abrió la app), abre wa.me
+    const fallback = setTimeout(() => {
+      window.open(webUrl, '_blank');
+    }, 1500);
+    // Si el usuario vuelve al foco rápido, cancela el fallback (la app se abrió)
+    window.addEventListener('blur', function onBlur() {
+      clearTimeout(fallback);
+      window.removeEventListener('blur', onBlur);
+    }, { once: true });
+    setTimeout(() => { try { document.body.removeChild(iframe); } catch(e){} }, 3000);
+    closeModal();
+  } catch(e) {
+    showToast('Error: ' + e.message, 'error');
+    btn.disabled = false; btn.textContent = 'Abrir WhatsApp';
+  }
+}
+
+// ─── NOTIFICACIONES (cambios externos en Drive) ───────────────────────────────
+function toggleNotifPanel() {
+  const panel = document.getElementById('notifPanelContainer');
+  if (panel.innerHTML) { panel.innerHTML = ''; return; }
+  renderNotifPanel();
+}
+
+function renderNotifPanel() {
+  const panel = document.getElementById('notifPanelContainer');
+  if (!notifications.length) {
+    panel.innerHTML = `<div class="notif-panel">
+      <div class="notif-panel-head"><h4>Notificaciones</h4>
+        <button class="notif-link" onclick="manualCheckChanges()">Verificar ahora</button>
+      </div>
+      <div class="notif-empty">Sin notificaciones.<br>Aquí verás avisos si algún archivo de un cliente cambia, se agrega o se elimina fuera de la app.</div>
+    </div>`;
+    return;
+  }
+  const items = notifications.map(n => `
+    <div class="notif-item ${n.read?'read':'unread'}" onclick="markNotifRead('${n.id}')">
+      <div class="notif-dot2"></div>
+      <div class="notif-txt">
+        <div>${notifTypeLabel(n.type)} en <b>${escH(n.clientName)}</b>: ${escH(n.fileName)}</div>
+        <div class="notif-meta">${fmtDateTime(n.time)}</div>
+      </div>
+    </div>`).join('');
+  panel.innerHTML = `<div class="notif-panel">
+    <div class="notif-panel-head">
+      <h4>Notificaciones</h4>
+      <div class="notif-panel-actions">
+        <button class="notif-link" onclick="manualCheckChanges()">Verificar</button>
+        <button class="notif-link" onclick="markAllRead()">Marcar leídas</button>
+        <button class="notif-link" onclick="clearNotifs()">Limpiar</button>
+      </div>
+    </div>
+    <div>${items}</div>
+  </div>`;
+}
+
+function notifTypeLabel(t) { return t==='new' ? '🆕 Archivo nuevo' : t==='modified' ? '✏️ Modificado' : '🗑 Eliminado'; }
+
+// ─── NOTIFICACIONES DEL SISTEMA (mientras la app está abierta) ────────────────
+// No requiere backend ni costo: usa la API nativa de notificaciones del navegador.
+// Funciona aunque la pestaña esté minimizada o en segundo plano, mientras el
+// navegador siga abierto en ese dispositivo.
+async function ensureNotifPermission() {
+  if (!('Notification' in window)) return false;
+  if (Notification.permission === 'granted') return true;
+  if (Notification.permission === 'denied') return false;
+  try {
+    const perm = await Notification.requestPermission();
+    return perm === 'granted';
+  } catch (e) { return false; }
+}
+
+function showSystemNotification(alerts) {
+  if (!('Notification' in window) || Notification.permission !== 'granted' || !alerts.length) return;
+  const title = alerts.length === 1 ? notifTypeLabel(alerts[0].type) : `${alerts.length} cambios detectados`;
+  const body = alerts.length === 1
+    ? `${alerts[0].clientName}: ${alerts[0].fileName}`
+    : alerts.slice(0, 3).map(a => `${a.clientName}: ${a.fileName}`).join(' · ');
+  try {
+    const n = new Notification(title, { body, icon: './favicon.png' });
+    n.onclick = () => { window.focus(); n.close(); };
+  } catch (e) { /* algunos navegadores requieren contexto de usuario; se ignora si falla */ }
+}
+
+function markNotifRead(id) {
+  const n = notifications.find(x => x.id === id);
+  if (n) { n.read = true; saveNotifications(); renderNotifBadge(); renderNotifPanel(); }
+}
+function markAllRead() { notifications.forEach(n => n.read = true); saveNotifications(); renderNotifBadge(); renderNotifPanel(); }
+function clearNotifs() { notifications = []; saveNotifications(); renderNotifBadge(); renderNotifPanel(); }
+
+function renderNotifBadge() {
+  const count = notifications.filter(n => !n.read).length;
+  const el = document.getElementById('notifBadge');
+  if (!el) return;
+  el.style.display = count ? 'flex' : 'none';
+  el.textContent = count > 9 ? '9+' : count;
+}
+
+async function manualCheckChanges() {
+  showToast('Verificando cambios en Drive...', '');
+  const n = await checkForChanges(false);
+  renderNotifPanel();
+  showToast(n > 0 ? `${n} cambio(s) detectado(s)` : 'Sin cambios nuevos', n > 0 ? 'success' : '');
+}
+
+// Revisa la carpeta raíz de cada cliente y compara contra el último snapshot guardado.
+// La primera vez que se revisa un cliente solo se guarda la línea base (sin generar avisos).
+async function checkForChanges(silent=true) {
+  if (!accessToken || !clients.length) return 0;
+  if (!silent) setStatus('Verificando cambios...', 'loading');
+  let count = 0;
+  const newAlerts = [];
+  for (let i = 0; i < clients.length; i++) {
+    const c = clients[i];
+    try {
+      const files = await listFiles(c.folderId);
+      const prev = snapshots[c.folderId];
+      const curMap = {};
+      files.forEach(f => { curMap[f.id] = f.modifiedTime; });
+      if (prev) {
+        files.forEach(f => {
+          if (!prev[f.id]) {
+            const n = { id: genId(), clientName: c.name, fileName: f.name, type: 'new', time: f.modifiedTime, read: false };
+            notifications.unshift(n); newAlerts.push(n);
+            count++;
+          } else if (prev[f.id] !== f.modifiedTime) {
+            const n = { id: genId(), clientName: c.name, fileName: f.name, type: 'modified', time: f.modifiedTime, read: false };
+            notifications.unshift(n); newAlerts.push(n);
+            count++;
+          }
+        });
+        Object.keys(prev).forEach(fid => {
+          if (!curMap[fid]) {
+            const n = { id: genId(), clientName: c.name, fileName: '(archivo eliminado o movido)', type: 'deleted', time: new Date().toISOString(), read: false };
+            notifications.unshift(n); newAlerts.push(n);
+            count++;
+          }
+        });
+      }
+      snapshots[c.folderId] = curMap;
+    } catch(e) { /* cliente sin acceso o carpeta inválida: se omite */ }
+  }
+  if (notifications.length > 60) notifications = notifications.slice(0, 60);
+  saveSnapshots();
+  saveNotifications();
+  renderNotifBadge();
+  if (newAlerts.length) showSystemNotification(newAlerts);
+  if (!silent) setStatus('Listo');
+  return count;
+}
+
+// Cierra el panel de notificaciones al hacer clic fuera de él
+document.addEventListener('click', (e) => {
+  const panel = document.getElementById('notifPanelContainer');
+  const btn = document.getElementById('notifBtn');
+  if (panel && panel.innerHTML && !panel.contains(e.target) && btn && !btn.contains(e.target)) {
+    panel.innerHTML = '';
+  }
+});
+
+// ─── PWA: SERVICE WORKER E INSTALACIÓN ─────────────────────────────────────────
+let deferredInstallPrompt = null;
+
+function isStandaloneMode() {
+  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+}
+function isIOSDevice() {
+  return /iPhone|iPad|iPod/.test(navigator.userAgent) && !window.MSStream;
+}
+function showInstallButtons(show) {
+  document.querySelectorAll('.install-btn').forEach(b => { b.style.display = show ? 'inline-flex' : 'none'; });
+}
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  if (!isStandaloneMode()) showInstallButtons(true);
+});
+
+window.addEventListener('appinstalled', () => {
+  deferredInstallPrompt = null;
+  showInstallButtons(false);
+  showToast('App instalada correctamente', 'success');
+});
+
+async function triggerInstall() {
+  if (deferredInstallPrompt) {
+    deferredInstallPrompt.prompt();
+    try { await deferredInstallPrompt.userChoice; } catch(e) {}
+    deferredInstallPrompt = null;
+    showInstallButtons(false);
+    return;
+  }
+  if (isIOSDevice()) { openIosInstallHelp(); return; }
+  openGenericInstallHelp();
+}
+
+function openIosInstallHelp() {
+  openModal(`
+    <h3>Instalar en iPhone / iPad</h3>
+    <p class="modal-sub">Safari no muestra un aviso automático, pero puedes agregar la app a tu pantalla de inicio en unos pasos:</p>
+    <ol style="font-size:13px;color:var(--text);line-height:1.9;padding-left:20px;margin-bottom:6px;">
+      <li>Toca el botón <strong>Compartir</strong> (el cuadrado con la flecha hacia arriba) en la barra de Safari.</li>
+      <li>Desplázate y elige <strong>"Agregar a pantalla de inicio"</strong>.</li>
+      <li>Confirma el nombre y toca <strong>"Agregar"</strong>.</li>
+    </ol>
+    <div class="modal-actions"><button class="btn btn-primary" onclick="closeModal()">Entendido</button></div>`);
+}
+
+function openGenericInstallHelp() {
+  openModal(`
+    <h3>Instalar la app en PC</h3>
+    <p class="modal-sub">Chrome 117+ incluye el botón de instalación directamente en la barra de direcciones. Sigue estos pasos:</p>
+    <ol style="font-size:13px;color:var(--text);line-height:2;padding-left:20px;margin-bottom:12px;">
+      <li>Mira la barra de direcciones de Chrome — busca el ícono <strong>⊕</strong> o un ícono de pantalla con flecha hacia arriba en el extremo derecho.</li>
+      <li>Haz clic en ese ícono y selecciona <strong>"Instalar"</strong>.</li>
+      <li>Si no aparece el ícono, abre el menú <strong>⋮</strong> (arriba a la derecha) → <strong>"Guardar y compartir"</strong> → <strong>"Instalar página como app"</strong>.</li>
+    </ol>
+    <p style="font-size:12px;color:var(--gray-text);margin-bottom:16px;">En Edge: menú <strong>…</strong> → <strong>"Aplicaciones"</strong> → <strong>"Instalar este sitio como aplicación"</strong>.</p>
+    <div class="modal-actions"><button class="btn btn-primary" onclick="closeModal()">Entendido</button></div>`);
+}
+
+function initInstallButtonVisibility() {
+  if (isStandaloneMode()) { showInstallButtons(false); return; }
+  // Mostrar siempre: en Chrome 149+ beforeinstallprompt puede no dispararse
+  // automáticamente pero la instalación sigue disponible desde la barra de Chrome.
+  showInstallButtons(true);
+}
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(() => { /* el SW es opcional; si falla, la app sigue funcionando */ });
+  });
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+async function initDriveFlow() {
+  if (window.location.hash.includes('access_token')) {
+    handleAuthCallback();
+  } else {
+    checkStoredToken();
+  }
+  // Always go to appScreen — Drive connection is on-demand
+  document.getElementById('authScreen').style.display = 'none';
+  document.getElementById('appScreen').style.display = 'flex';
+  renderClients();
+  renderNotifBadge();
+  if (accessToken) {
+    try {
+      const info = await getUserInfo();
+      document.getElementById('userName').textContent = info.name || info.email || '';
+      document.getElementById('userAvatar').textContent = initials(info.name || info.email || '?');
+    } catch(e) {}
+    await ensureNotifPermission();
+    checkForChanges(true);
+  }
+}
+
+// Called before any Drive action — prompts connect if needed
+async function requireDrive() {
+  if (accessToken) return true;
+  if (confirm('Para ver o subir archivos necesitas conectar tu cuenta de Google Drive. ¿Conectar ahora?')) {
+    startAuth();
+  }
+  return false;
+}
+
+initInstallButtonVisibility();
+initWindowDrop();
+(function(){ const btn=document.getElementById('darkToggle'); if(btn&&document.body.classList.contains('dark')) btn.textContent='☀️'; })();
+
+auth.onAuthStateChanged(async (user) => {
+  if (user) {
+    currentUser = user;
+    document.getElementById('loginScreen').style.display = 'none';
+    setStatus('Cargando tus datos...', 'loading');
+    await loadUserData(user);
+    setStatus('Listo');
+    await initDriveFlow();
+  } else {
+    currentUser = null;
+    if (notifInterval) { clearInterval(notifInterval); notifInterval = null; }
+    clients = []; snapshots = {}; notifications = [];
+    document.getElementById('loginScreen').style.display = 'flex';
+    document.getElementById('authScreen').style.display = 'none';
+    document.getElementById('appScreen').style.display = 'none';
+    showAuthView('login');
+  }
+});
+</script>
+</body>
+</html>
